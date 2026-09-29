@@ -1,0 +1,2526 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0f6d3a" />
+<title>Painel Ecoviva - Armazens</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f6f8;
+    --texto: #17212b;
+    --texto-suave: #64748b;
+    --cartao: #ffffff;
+    --borda: #e2e8f0;
+    --verde: #1a9350;
+    --verde-escuro: #0f6d3a;
+    --verde-claro: #e6f6ec;
+    --azul: #2563eb;
+    --azul-escuro: #1d4ed8;
+    --azul-claro: #e8edff;
+    --erro: #dc2626;
+    --erro-claro: #fef2f2;
+    --aviso: #b45309;
+    --aviso-claro: #fffbeb;
+    --divergencia: #b7791f;
+    --divergencia-claro: #fef0e7;
+    /* Paleta categorica pros graficos de barra que comparam entidades
+       (armazem/categoria/fluxo) - distinta da paleta semantica acima
+       (verde/erro/aviso ja tem significado proprio de status). Mesmos tons
+       nos dois temas, mesmo padrao ja usado pro resto das cores fixas
+       (nao redefinidas no bloco dark abaixo). */
+    --grafico-1: #2563eb;
+    --grafico-2: #1a9350;
+    --grafico-3: #db2777;
+    --grafico-4: #ca8a04;
+    --grafico-5: #7c3aed;
+    --grafico-6: #0891b2;
+    --grafico-7: #dc2626;
+    --grafico-8: #65a30d;
+    --sombra-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --sombra-md: 0 6px 20px rgba(15, 23, 42, 0.08);
+    --raio: 10px;
+  }
+  /* Tema claro/escuro: comeca em `prefers-color-scheme` (SO de quem esta
+     olhando o painel), mas uma escolha manual no botao sol/lua do cabecalho
+     sempre vence e fica salva neste navegador (`data-tema` em `<html>`,
+     mesmo padrao de `src/hooks/useTema.ts` no app) - por isso o seletor da
+     media query exclui `[data-tema="claro"]` (escolha manual pro claro
+     vence mesmo com o SO em escuro) e o bloco `[data-tema="escuro"]` abaixo
+     repete os mesmos valores pra vencer o SO no sentido contrario. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-tema="claro"]) {
+      --bg: #10161f;
+      --texto: #e7edf5;
+      --texto-suave: #93a2b8;
+      --cartao: #171f2b;
+      --borda: #2b3648;
+      --verde-claro: #143726;
+      --azul-claro: #1a2749;
+      --erro-claro: #3a1a1c;
+      --aviso-claro: #3a2c0f;
+      --divergencia-claro: #3a2814;
+      --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+      --sombra-md: 0 6px 24px rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-tema="escuro"] {
+    --bg: #10161f;
+    --texto: #e7edf5;
+    --texto-suave: #93a2b8;
+    --cartao: #171f2b;
+    --borda: #2b3648;
+    --verde-claro: #143726;
+    --azul-claro: #1a2749;
+    --erro-claro: #3a1a1c;
+    --aviso-claro: #3a2c0f;
+    --divergencia-claro: #3a2814;
+    --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --sombra-md: 0 6px 24px rgba(0, 0, 0, 0.4);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--texto);
+    -webkit-font-smoothing: antialiased;
+  }
+  .idioma-toggle { display: flex; gap: 4px; }
+  .idioma-btn {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .idioma-btn.ativo { background: white; color: var(--verde-escuro); border-color: white; }
+  .gate .idioma-toggle { justify-content: center; margin-bottom: 14px; }
+  .gate .idioma-btn { background: var(--bg); color: var(--texto-suave); border-color: var(--borda); }
+  .gate .idioma-btn.ativo { background: var(--verde); color: white; border-color: var(--verde); }
+  .tema-btn {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+  }
+  .tema-btn:hover { background: rgba(255, 255, 255, 0.24); }
+  .tema-btn .icone-inline { width: 15px; height: 15px; }
+  header .header-controles { margin-left: auto; align-self: flex-start; display: flex; align-items: center; gap: 10px; }
+  header {
+    background: linear-gradient(135deg, var(--verde), var(--verde-escuro));
+    color: white;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: var(--sombra-md);
+  }
+  /* Icones SVG inline (substituem os emojis usados antes como icone) -
+     `stroke="currentColor"` no proprio SVG ja herda a cor do texto ao redor
+     em qualquer tema/badge, essa classe so cuida do tamanho. */
+  .icone-inline { width: 1em; height: 1em; flex-shrink: 0; }
+  header .icone-cabecalho {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  header .icone-cabecalho .icone-inline { width: 22px; height: 22px; }
+  header h1 { margin: 0; font-size: 1.25rem; font-weight: 700; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .badge-somente-leitura {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    background: rgba(255, 255, 255, 0.16);
+    padding: 3px 10px;
+    border-radius: 999px;
+    cursor: help;
+    letter-spacing: 0.02em;
+  }
+  header p { margin: 3px 0 0; font-size: 0.82rem; opacity: 0.92; font-variant-numeric: tabular-nums; }
+  main { padding: 24px; max-width: 1200px; margin: 0 auto; }
+  .cartao {
+    background: var(--cartao);
+    border: 1px solid var(--borda);
+    border-radius: var(--raio);
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: var(--sombra-sm);
+  }
+  .cartao h3 { margin: 0 0 4px; font-size: 1rem; }
+  .cartao-cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 4px; }
+  .cartao-cabecalho h3 { margin: 0; }
+  button.secundario {
+    background: var(--cartao);
+    color: var(--texto-suave);
+    border: 1px solid var(--borda);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  button.secundario:hover { background: var(--bg); color: var(--texto); border-color: var(--texto-suave); }
+  .gate {
+    max-width: 380px;
+    margin: 90px auto;
+    text-align: center;
+    box-shadow: var(--sombra-md);
+  }
+  .gate h2 { margin: 4px 0 6px; }
+  .gate p { color: var(--texto-suave); font-size: 0.9rem; }
+  .gate input {
+    width: 100%;
+    padding: 11px 12px;
+    font-size: 1rem;
+    margin: 12px 0;
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--texto);
+  }
+  .gate input:focus, .filtros select:focus, .filtros input:focus {
+    outline: none;
+    border-color: var(--verde);
+    box-shadow: 0 0 0 3px rgba(26, 147, 80, 0.18);
+  }
+  .gate button, .filtros button {
+    background: var(--verde);
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: background 0.15s ease;
+  }
+  .gate button:hover, .filtros button:hover { background: var(--verde-escuro); }
+  .atalhos-periodo { display: flex; gap: 6px; }
+  .filtros button.atalho {
+    background: var(--cartao);
+    color: var(--texto-suave);
+    border: 1px solid var(--borda);
+    padding: 8px 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+  .filtros button.atalho:hover { background: var(--verde-claro); color: var(--verde-escuro); border-color: var(--verde); }
+  /* Atalho ativo (ex.: "Hoje", o padrao ao abrir o painel) - antes nenhum
+     atalho mostrava qual periodo estava de fato aplicado, so dava pra saber
+     olhando os campos De/Ate. */
+  .filtros button.atalho.ativo { background: var(--verde); color: white; border-color: var(--verde); }
+  .gate .erro { color: var(--erro); font-size: 0.9rem; font-weight: 600; }
+
+  /* Abas por fluxo: navegacao primaria do painel (mesmos 4 fluxos que o app
+     desktop ja separa em telas proprias - Saida de Armazem/Montagem/SAC/
+     Reparo Externo), pra parar de esconder essa divisao dentro de um
+     <select> de peso igual a filtros finos como Responsavel/Busca. "Todos"
+     (data-fluxo="") continua sendo a visao consolidada, e o padrao ao abrir. */
+  .abas-fluxo {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    background: var(--bg);
+    padding: 14px 0;
+    margin-bottom: 4px;
+  }
+  .aba-fluxo {
+    background: var(--cartao);
+    border: 1px solid var(--borda);
+    color: var(--texto-suave);
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .aba-fluxo:hover { border-color: var(--verde); }
+  .aba-fluxo.ativa { background: var(--verde); color: white; border-color: var(--verde); }
+  /* Cor de cada aba ao ficar ativa reaproveita a mesma paleta ja usada no
+     grafico "Por fluxo" (CORES_FLUXO no script abaixo) - quem ja associa
+     azul=Saida/dourado=Montagem/ciano=SAC/verde-oliva=Reparo nos graficos
+     reconhece a mesma cor na aba. */
+  .aba-fluxo-saida_armazem.ativa { background: var(--grafico-1); border-color: var(--grafico-1); }
+  .aba-fluxo-peca_montagem.ativa { background: var(--grafico-4); border-color: var(--grafico-4); }
+  .aba-fluxo-sac.ativa { background: var(--grafico-6); border-color: var(--grafico-6); }
+  .aba-fluxo-reparo_externo.ativa { background: var(--grafico-8); border-color: var(--grafico-8); }
+  .aba-fluxo-contagem {
+    background: var(--bg);
+    color: var(--texto-suave);
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-size: 0.72rem;
+    font-weight: 700;
+  }
+  .aba-fluxo.ativa .aba-fluxo-contagem { background: rgba(255, 255, 255, 0.25); color: white; }
+
+  .filtros-linha { display: flex; flex-wrap: wrap; gap: 14px; align-items: end; }
+  /* Segunda linha de filtros (refinamentos finos - pedido/responsavel/tipo/
+     situacao/busca) separada visualmente da primeira (periodo/armazem, o
+     recorte principal "qual dado eu quero ver") - antes eram 8 controles de
+     peso visual igual numa parede so. */
+  .filtros-linha-refinar { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--borda); }
+  .filtros-linha label { display: flex; flex-direction: column; font-size: 0.78rem; font-weight: 600; color: var(--texto-suave); gap: 5px; }
+  .filtros label.campo-destaque { color: var(--verde-escuro); }
+  .filtros label.campo-destaque input {
+    border-color: var(--verde);
+    font-weight: 700;
+    min-width: 160px;
+  }
+  .filtros select, .filtros input {
+    padding: 8px 10px;
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: var(--cartao);
+    color: var(--texto);
+  }
+  /* table-layout: fixed (largura de cada coluna vem so do <th>, ver
+     .col-* abaixo) - sem isso o navegador da a cada coluna a largura do
+     seu conteudo mais largo, o que sempre acabava exigindo rolagem
+     horizontal pra ver as ultimas colunas (Situacao/Sincronizado). Com
+     largura fixa por coluna, colunas de texto variavel (Fluxo/Registrado
+     por/Pedido) quebram linha ou cortam com reticencias (title com o
+     valor completo) em vez de esticar a tabela. */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: fixed; }
+  th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--borda); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .col-armazem { width: 8%; }
+  .col-fluxo { width: 8%; white-space: normal; }
+  .col-datahora { width: 12%; }
+  .col-qtd { width: 6%; font-variant-numeric: tabular-nums; }
+  .col-registrado { width: 11%; }
+  .col-situacao { width: 9%; }
+  .col-sincronizado { width: 11%; }
+  .col-coleta { width: 9%; white-space: normal; }
+  .col-razaosocial { width: 8%; white-space: normal; }
+  /* Colunas so fazem sentido dentro de fluxos especificos - a coluna Fluxo
+     fica redundante depois que a aba ja filtrou pra um so (so continua
+     visivel em "Todos"), e Razao Social so e coletada em saida_armazem/sac
+     (ver CLAUDE.md) - fora dessas duas fica sempre "-", entao esconde em vez
+     de poluir a tabela de Montagem/Reparo Externo com uma coluna vazia. */
+  #conteudo:not([data-aba-atual="todos"]) .col-fluxo { display: none; }
+  #conteudo[data-aba-atual="peca_montagem"] .col-razaosocial,
+  #conteudo[data-aba-atual="reparo_externo"] .col-razaosocial { display: none; }
+  /* "Transferencias pendentes" nao existe pra Reparo Externo (fluxo nao
+     suporta armazem_destino); "Reparos em aberto" so existe pra Reparo
+     Externo - cada card so aparece onde faz sentido. */
+  #conteudo[data-aba-atual="reparo_externo"] #cartao-pendentes { display: none; }
+  #conteudo:not([data-aba-atual="todos"]):not([data-aba-atual="reparo_externo"]) #cartao-reparos-abertos { display: none; }
+  th { position: sticky; top: 0; background: var(--cartao); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
+  tbody tr:hover { background: var(--bg); }
+  tbody tr.linha-clicavel { cursor: pointer; }
+
+  /* Modal de detalhe (clique numa linha) - mostra o movimento completo mais
+     qualquer relacionado (original de um estorno, par de uma transferencia,
+     par de envio/retorno de reparo externo). Overlay simples, sem lib. */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 100;
+  }
+  .modal-caixa {
+    background: var(--cartao);
+    border-radius: var(--raio);
+    box-shadow: var(--sombra-md);
+    max-width: 640px;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    padding: 20px 22px;
+    position: relative;
+  }
+  .modal-fechar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: none;
+    border: none;
+    color: var(--texto-suave);
+    cursor: pointer;
+    padding: 4px;
+    line-height: 0;
+  }
+  .modal-fechar:hover { color: var(--texto); }
+  .modal-registro { border: 1px solid var(--borda); border-radius: 8px; padding: 12px 14px; margin-top: 12px; }
+  .modal-registro h4 { margin: 0 0 8px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--texto-suave); }
+  .modal-campo { display: flex; gap: 8px; font-size: 0.85rem; padding: 3px 0; }
+  .modal-campo .rotulo-campo { color: var(--texto-suave); min-width: 130px; flex-shrink: 0; }
+  .tabela-scroll { overflow-x: auto; max-height: 65vh; overflow-y: auto; border-radius: 8px; border: 1px solid var(--borda); }
+  .tabela-scroll table { border: none; }
+  .tabela-scroll tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em; }
+  .badge-entrada { background: var(--verde-claro); color: var(--verde-escuro); }
+  .badge-baixa { background: var(--azul-claro); color: var(--azul-escuro); }
+  .badge-pendente { background: var(--aviso-claro); color: var(--aviso); }
+  .badge-divergencia { background: var(--divergencia-claro); color: var(--divergencia); }
+  .badge-estorno { background: var(--erro-claro); color: var(--erro); }
+  .badge-recusado { background: var(--aviso-claro); color: var(--aviso); }
+  .col-pedido { width: 10%; }
+  td.col-pedido { font-weight: 700; color: var(--verde-escuro); }
+  .col-itens { width: 8%; white-space: normal; }
+  .obs-detalhe { color: var(--texto-suave); font-style: italic; }
+  .aviso-truncado {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: var(--aviso-claro);
+    color: var(--aviso);
+    border: 1px solid var(--aviso);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    margin: 0 0 14px;
+  }
+  .aviso-truncado .icone-inline { margin-top: 0.15em; }
+  .rodape { font-size: 0.75rem; color: var(--texto-suave); margin-top: 10px; }
+  .rodape-pagina { font-size: 0.72rem; color: var(--texto-suave); text-align: center; margin: 4px 0 0; }
+  .escondido { display: none; }
+  .subtitulo-cartao { margin: 0 0 12px; font-size: 0.82rem; color: var(--texto-suave); }
+  .status-armazens { display: flex; flex-wrap: wrap; gap: 10px; }
+  .status-armazem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    flex: 1;
+    min-width: 220px;
+    font-variant-numeric: tabular-nums;
+  }
+  .status-armazem .ponto { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-armazem .ponto.fresco { background: var(--verde); }
+  .status-armazem .ponto.morno { background: var(--aviso); }
+  .status-armazem .ponto.frio { background: var(--erro); }
+  /* Antes so o pontinho de 10px mudava de cor com o atraso - facil de nao
+     notar. Acima de 2h sem sincronizar (ver `frescor`), o card inteiro
+     ganha destaque de erro, do mesmo jeito que qualquer outro alerta ja
+     usa (`--erro-claro`/`--erro` do resto da pagina). */
+  .status-armazem.frio { background: var(--erro-claro); border-color: var(--erro); }
+  .status-armazem strong { margin-right: 4px; }
+  .grade-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+  .stat-tile { background: var(--bg); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 16px; min-width: 140px; flex: 1; }
+  /* tabular-nums: o painel se atualiza sozinho a cada 5 minutos (o
+     `setInterval` perto do fim do arquivo) - sem isso, o numero mudar de
+     "76" pra "108" desloca o layout horizontalmente a cada refresh (digito
+     1 e mais estreito que os outros nas fontes proporcionais usadas aqui). */
+  .stat-tile .valor { font-size: 1.5rem; font-weight: 700; color: var(--verde); font-variant-numeric: tabular-nums; }
+  .stat-tile .valor.aviso { color: var(--aviso); }
+  .stat-tile .valor.erro { color: var(--erro); }
+  .stat-tile .rotulo { font-size: 0.75rem; color: var(--texto-suave); margin-top: 2px; }
+  /* Comparacao com o periodo anterior (ver `deltaTexto`) - fonte pequena e
+     cor neutra de proposito, herdaria o 1.5rem verde/vermelho de `.valor`
+     sem essas duas regras. Nao e semaforo (mais/menos movimento nao e bom
+     nem mau por si so). */
+  .tile-delta { font-size: 0.68rem; font-weight: 700; color: var(--texto-suave); vertical-align: middle; margin-left: 4px; }
+  .grafico-bloco { margin-top: 18px; }
+  .grafico-bloco h4 { margin: 0 0 10px; font-size: 0.85rem; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.03em; }
+  .barra-linha { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; margin-bottom: 6px; }
+  .barra-linha .rotulo-barra { width: 110px; flex-shrink: 0; text-align: right; color: var(--texto-suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .barra-linha svg { flex: 1; height: 16px; min-width: 60px; }
+  .barra-linha .valor-barra { width: 34px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .lista-pendentes p { padding: 8px 0; border-bottom: 1px solid var(--borda); margin: 0; }
+  .lista-pendentes p:last-child { border-bottom: none; }
+
+  /* P3 do levantamento do painel (ver docs/ROADMAP.md, "P3 ganhou um item
+     concreto: visualizacao no celular") - ate aqui a pagina nao tinha
+     nenhum @media de largura. So `@media (max-width: ...)`, sem framework
+     novo, mesma filosofia "sem build step" do resto do arquivo. Um so
+     breakpoint (720px, cobre celular em pe e retrato de tablet estreito)
+     em vez de varios estagios, pra manter o raciocinio simples de revisar. */
+  @media (max-width: 720px) {
+    main { padding: 12px; }
+    .cartao { padding: 12px; }
+
+    /* Cabecalho quebrava o seletor PT/中文 em circulos espremidos - forcar
+       ele pra propria linha (100% de largura dentro do flex com wrap) em
+       vez de disputar espaco com o titulo. */
+    header { flex-wrap: wrap; row-gap: 8px; padding: 14px 16px; }
+    header h1 { font-size: 1.05rem; }
+    header .header-controles { margin-left: 0; width: 100%; justify-content: flex-end; }
+
+    /* Abas por fluxo: 5 pílulas + contador não cabem numa tela de ~360-400px
+       sem quebrar em varias linhas feias - rolagem horizontal (como uma
+       barra de abas de app mobile) em vez de empilhar. */
+    .abas-fluxo { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 10px 0; }
+    .aba-fluxo { flex-shrink: 0; }
+
+    /* Grade de filtros: o wrap automatico agrupava campos de forma
+       arbitraria (ex.: atalhos de periodo dividindo linha com Responsavel
+       por acaso) - empilhado em coluna unica fica previsivel. */
+    .filtros-linha { flex-direction: column; align-items: stretch; }
+    .filtros-linha label, .filtros-linha label.campo-destaque input { width: 100%; min-width: 0; }
+    .atalhos-periodo button { flex: 1; }
+
+    /* Tabela de 10 colunas era ilegivel (cabecalho truncava pra letras
+       soltas so no layout, antes de qualquer dado) - so esconder colunas
+       nao bastou (confirmado num teste real: mesmo com so 7, o cabecalho
+       de largura fixa ainda truncava pra "A...", "DAT...", "CO..." etc.).
+       Layout "tabela vira lista de cartoes": cada `<tr>` passa a ser um
+       bloco empilhado, cada celula uma linha label:valor (o rotulo vem de
+       `data-label`, escrito por `renderizarTabela`/`t()` - unico ponto que
+       precisou de JS novo, o resto e so CSS). Esconde Fluxo/Registrado
+       por/Sincronizado (Sincronizado ja tem o card "Sincronizacao por
+       armazem" acima, por armazem) pra cada cartao nao ficar comprido
+       demais numa lista de 200+ movimentos. */
+    .tabela-scroll table, .tabela-scroll tbody, .tabela-scroll tr { display: block; width: 100%; }
+    .tabela-scroll thead { display: none; }
+    .tabela-scroll tbody tr {
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+    }
+    .tabela-scroll td {
+      display: block;
+      width: 100% !important;
+      border-bottom: none;
+      white-space: normal;
+      overflow: visible;
+      text-overflow: clip;
+      padding: 3px 0;
+    }
+    .tabela-scroll td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      color: var(--texto-suave);
+    }
+    .col-fluxo, .col-registrado, .col-sincronizado { display: none !important; }
+
+    /* Rotulo do grafico de barra (categoria/armazem/fluxo) mais estreito -
+       sobra mais espaco pra barra em si numa tela de ~360-400px de largura
+       util (depois do padding do .cartao acima). */
+    .barra-linha .rotulo-barra { width: 78px; font-size: 0.74rem; }
+  }
+</style>
+</head>
+<body>
+
+<div id="gate" class="gate cartao">
+  <div class="idioma-toggle">
+    <button type="button" class="idioma-btn" data-idioma="pt">PT</button>
+    <button type="button" class="idioma-btn" data-idioma="zh">中文</button>
+  </div>
+  <h2 data-i18n="gateTitulo">Painel Ecoviva</h2>
+  <p data-i18n="gateDescricao">Acesso restrito - digite a senha combinada com a gestao.</p>
+  <input id="campo-senha" type="password" placeholder="Senha" data-i18n-placeholder="senhaPlaceholder" autofocus />
+  <button id="botao-entrar" data-i18n="botaoEntrar">Entrar</button>
+  <p id="erro-senha" class="erro escondido" data-i18n="senhaIncorreta">Senha incorreta.</p>
+</div>
+
+<div id="conteudo" class="escondido" data-aba-atual="todos">
+  <header>
+    <span class="icone-cabecalho" aria-hidden="true">
+      <svg class="icone-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+    </span>
+    <div>
+      <h1><span data-i18n="headerTitulo">Painel Ecoviva - Armazens A4 / B2</span>
+        <span class="badge-somente-leitura" title="Este painel so consegue LER os dados - o acesso usado aqui e um token do banco configurado para nunca aceitar escrita, reforcado pelo proprio servidor do banco (nao e so uma trava no codigo desta pagina). Os dados vem do app oficial de cada armazem, que registra cada lancamento com um hash de auditoria encadeado." data-i18n-title="badgeSomenteLeituraTitulo">
+          <svg class="icone-inline" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+          <span data-i18n="badgeSomenteLeitura">somente leitura</span>
+        </span>
+      </h1>
+      <p id="status-topo">Carregando...</p>
+    </div>
+    <div class="header-controles">
+      <button type="button" id="botao-tema" class="tema-btn" aria-label="Alternar tema claro/escuro">
+        <svg id="icone-tema-sol" class="icone-inline escondido" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.5"/><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="4.9" y1="4.9" x2="6.6" y2="6.6"/><line x1="17.4" y1="17.4" x2="19.1" y2="19.1"/><line x1="4.9" y1="19.1" x2="6.6" y2="17.4"/><line x1="17.4" y1="6.6" x2="19.1" y2="4.9"/></svg>
+        <svg id="icone-tema-lua" class="icone-inline escondido" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a7 7 0 1 0 10.5 10.5z"/></svg>
+      </button>
+      <div class="idioma-toggle">
+        <button type="button" class="idioma-btn" data-idioma="pt">PT</button>
+        <button type="button" class="idioma-btn" data-idioma="zh">中文</button>
+      </div>
+    </div>
+  </header>
+  <main>
+    <nav class="abas-fluxo" id="abas-fluxo" role="tablist" aria-label="Fluxo">
+      <button type="button" class="aba-fluxo ativa" data-fluxo="" role="tab" aria-selected="true">
+        <span data-i18n="opcaoTodos">Todos</span>
+        <span class="aba-fluxo-contagem">0</span>
+      </button>
+      <button type="button" class="aba-fluxo aba-fluxo-saida_armazem" data-fluxo="saida_armazem" role="tab" aria-selected="false">
+        <span data-i18n="fluxoSaidaArmazem">Saida de Armazem</span>
+        <span class="aba-fluxo-contagem">0</span>
+      </button>
+      <button type="button" class="aba-fluxo aba-fluxo-peca_montagem" data-fluxo="peca_montagem" role="tab" aria-selected="false">
+        <span data-i18n="fluxoMontagem">Montagem</span>
+        <span class="aba-fluxo-contagem">0</span>
+      </button>
+      <button type="button" class="aba-fluxo aba-fluxo-sac" data-fluxo="sac" role="tab" aria-selected="false">
+        <span data-i18n="fluxoSac">SAC</span>
+        <span class="aba-fluxo-contagem">0</span>
+      </button>
+      <button type="button" class="aba-fluxo aba-fluxo-reparo_externo" data-fluxo="reparo_externo" role="tab" aria-selected="false">
+        <span data-i18n="fluxoReparoExterno">Reparo Externo</span>
+        <span class="aba-fluxo-contagem">0</span>
+      </button>
+    </nav>
+
+    <div class="cartao filtros">
+      <div class="filtros-linha filtros-linha-principal">
+        <label><span data-i18n="filtroArmazemLabel">Armazem</span>
+          <select id="filtro-armazem">
+            <option value="" data-i18n="opcaoTodos">Todos</option>
+            <option value="A4">A4</option>
+            <option value="B2">B2</option>
+          </select>
+        </label>
+        <label><span data-i18n="filtroDeLabel">De</span>
+          <input id="filtro-data-inicio" type="date" />
+        </label>
+        <label><span data-i18n="filtroAteLabel">Ate</span>
+          <input id="filtro-data-fim" type="date" />
+        </label>
+        <label>&nbsp;
+          <div class="atalhos-periodo">
+            <button type="button" class="atalho" data-dias="0" data-i18n="atalhoHoje">Hoje</button>
+            <button type="button" class="atalho" data-dias="7" data-i18n="atalho7dias">7 dias</button>
+            <button type="button" class="atalho" data-dias="30" data-i18n="atalho30dias">30 dias</button>
+          </div>
+        </label>
+        <label>&nbsp;
+          <button id="botao-atualizar" data-i18n="botaoAtualizar">Atualizar agora</button>
+        </label>
+      </div>
+      <div class="filtros-linha filtros-linha-refinar">
+        <label class="campo-destaque"><span data-i18n="filtroPedidoLabel">Numero do pedido</span>
+          <input id="filtro-pedido" type="search" placeholder="Ex: 3893" data-i18n-placeholder="filtroPedidoPlaceholder" />
+        </label>
+        <label><span data-i18n="filtroResponsavelLabel">Responsavel</span>
+          <select id="filtro-responsavel">
+            <option value="" data-i18n="opcaoTodos">Todos</option>
+          </select>
+        </label>
+        <label><span data-i18n="filtroTipoLabel">Tipo</span>
+          <select id="filtro-tipo">
+            <option value="" data-i18n="opcaoTodos">Todos</option>
+            <option value="entrada" data-i18n="tipoEntrada">Entrada</option>
+            <option value="saida" data-i18n="tipoSaida">Saida</option>
+          </select>
+        </label>
+        <label><span data-i18n="filtroSituacaoLabel">Situacao</span>
+          <select id="filtro-situacao">
+            <option value="" data-i18n="opcaoTodas">Todas</option>
+            <option value="entrada" data-i18n="tipoEntrada">Entrada</option>
+            <option value="baixa" data-i18n="situacaoBaixa">Baixa</option>
+            <option value="estorno" data-i18n="situacaoEstorno">Estorno</option>
+            <option value="recusado" data-i18n="situacaoRecusado">Recusado</option>
+          </select>
+        </label>
+        <label><span data-i18n="filtroBuscaLabel">Busca</span>
+          <input id="filtro-busca" type="search" placeholder="Nome ou item" data-i18n-placeholder="filtroBuscaPlaceholder" />
+        </label>
+      </div>
+    </div>
+
+    <div class="cartao">
+      <h3 data-i18n="cartaoSyncTitulo">Sincronizacao por armazem</h3>
+      <p class="subtitulo-cartao" data-i18n="cartaoSyncSubtitulo">Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado.</p>
+      <div id="status-armazens" class="status-armazens"></div>
+    </div>
+
+    <div class="cartao" id="cartao-insights">
+      <h3 data-i18n="cartaoInsightsTitulo">Resumo do periodo filtrado</h3>
+      <p id="aviso-truncado" class="aviso-truncado escondido">
+        <svg class="icone-inline" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>
+        <span data-i18n="avisoTruncadoTexto">Este filtro tem mais movimentos do que o carregado - os numeros abaixo estao incompletos. Reduza o periodo ou refine o filtro pra ver o total real.</span>
+      </p>
+      <div id="grade-stats" class="grade-stats"></div>
+      <div class="grafico-bloco">
+        <h4 data-i18n="graficoVolumeTitulo">Volume por dia</h4>
+        <div id="grafico-volume"></div>
+      </div>
+      <div class="grafico-bloco">
+        <h4 data-i18n="graficoCategoriasTitulo">Top categorias de item</h4>
+        <div id="grafico-categorias"></div>
+      </div>
+      <div class="grafico-bloco escondido" id="bloco-por-armazem">
+        <h4 data-i18n="graficoArmazemTitulo">Por armazem</h4>
+        <div id="grafico-armazem"></div>
+      </div>
+      <div class="grafico-bloco escondido" id="bloco-por-fluxo">
+        <h4 data-i18n="graficoFluxoTitulo">Por fluxo</h4>
+        <div id="grafico-fluxo"></div>
+      </div>
+    </div>
+
+    <div class="cartao" id="cartao-pendentes">
+      <h3 data-i18n="cartaoPendentesTitulo">Transferencias pendentes de confirmacao</h3>
+      <div id="lista-pendentes" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
+    </div>
+
+    <!-- So faz sentido nas abas Todos/Reparo Externo - as outras 3 nunca
+         tem reparo externo, ver #conteudo[data-aba-atual] no <style>. -->
+    <div class="cartao" id="cartao-reparos-abertos">
+      <h3 data-i18n="cartaoReparosAbertosTitulo">Reparos externos em aberto</h3>
+      <p class="subtitulo-cartao" data-i18n="cartaoReparosAbertosSubtitulo">Pecas que sairam pro tecnico externo e ainda nao voltaram.</p>
+      <div id="lista-reparos-abertos" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
+    </div>
+
+    <div class="cartao">
+      <div class="cartao-cabecalho">
+        <h3 data-i18n="cartaoMovimentosTitulo">Movimentos recentes</h3>
+        <button type="button" id="botao-exportar-csv" class="secundario" data-i18n="botaoExportarCsv">Exportar CSV</button>
+      </div>
+      <div class="tabela-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-armazem" data-i18n="colArmazem">Armazem</th>
+              <th class="col-fluxo" data-i18n="colFluxo">Fluxo</th>
+              <th class="col-datahora" data-i18n="colData">Data/Hora</th>
+              <th class="col-pedido" data-i18n="colPedido">Pedido</th>
+              <th class="col-coleta" data-i18n="colColeta">Coleta</th>
+              <th class="col-razaosocial" data-i18n="colRazaoSocial">Razao Social</th>
+              <th class="col-itens" data-i18n="colItens">Itens</th>
+              <th class="col-qtd" data-i18n="colQtd">Qtd.</th>
+              <th class="col-registrado" data-i18n="colRegistradoPor">Registrado por</th>
+              <th class="col-situacao" data-i18n="colSituacao">Situacao</th>
+              <th class="col-sincronizado" data-i18n="colSincronizado">Sincronizado</th>
+            </tr>
+          </thead>
+          <tbody id="corpo-tabela"></tbody>
+        </table>
+      </div>
+      <p class="rodape" id="rodape-tabela"></p>
+    </div>
+    <p class="rodape-pagina" data-i18n="rodapePagina">
+      Este painel espelha os dados do app oficial de A4/B2 em tempo quase real - nao e a fonte oficial nem o lugar
+      pra conferir a integridade de um lancamento especifico (cada lancamento tem um hash de auditoria encadeado
+      que fica no app, nao reproduzido aqui).
+    </p>
+  </main>
+
+  <div id="modal-detalhe" class="modal-overlay escondido">
+    <div class="modal-caixa" role="dialog" aria-modal="true">
+      <button type="button" class="modal-fechar" id="modal-fechar" aria-label="Fechar">
+        <svg class="icone-inline" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+      <div id="modal-detalhe-conteudo"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // Credenciais do Turso (URL + token somente-leitura) CIFRADAS com uma chave
+  // derivada da senha do painel - injetadas no deploy por
+  // scripts/cifrar-credenciais-painel.mjs (ver .github/workflows/deploy-painel.yml).
+  // Antes o token ia em texto puro na pagina publica e qualquer "ver
+  // codigo-fonte" dava leitura do banco inteiro e permitia queimar a cota do
+  // Turso (docs/AUDITORIA.md, SEG-02). Agora, sem a senha certa, nao ha token
+  // pra extrair: a senha errada so faz o AES-GCM falhar. Nao existe mais hash
+  // da senha no arquivo.
+  var CREDENCIAIS_CIFRADAS = "__PAINEL_CREDENCIAIS_CIFRADAS__";
+  var TURSO_URL = "";
+  var TURSO_TOKEN = "";
+  // Guarda as credenciais ja decifradas so nesta aba (sessionStorage morre ao
+  // fechar a aba) pra nao pedir a senha de novo a cada recarregar.
+  var CHAVE_SESSAO = "ecoviva-painel-credenciais";
+
+  // ---- Tema (claro / escuro) ----
+  // Mesmo padrao do app (`src/hooks/useTema.ts`): comeca no que o SO de
+  // quem esta olhando ja usa (`prefers-color-scheme`, aplicado so via CSS -
+  // ver o bloco @media no <style>), mas uma escolha manual no botao
+  // sol/lua sempre vence e fica salva neste navegador (`data-tema` em
+  // `<html>`, por maquina - nao sincroniza entre quem acessa o painel).
+  var CHAVE_TEMA = "ecoviva-painel-tema";
+  var elBotaoTema = document.getElementById("botao-tema");
+  var elIconeTemaSol = document.getElementById("icone-tema-sol");
+  var elIconeTemaLua = document.getElementById("icone-tema-lua");
+
+  function temaSalvo() {
+    try {
+      var v = localStorage.getItem(CHAVE_TEMA);
+      return v === "claro" || v === "escuro" ? v : null;
+    } catch (e) { return null; }
+  }
+
+  function temaEfetivo() {
+    var salvo = temaSalvo();
+    if (salvo) return salvo;
+    return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "escuro" : "claro";
+  }
+
+  // So grava `data-tema` no `<html>` quando ha escolha manual - sem escolha,
+  // o CSS segue o SO sozinho (nenhum atributo), igual antes deste botao existir.
+  function aplicarAtributoTema() {
+    var salvo = temaSalvo();
+    if (salvo) document.documentElement.setAttribute("data-tema", salvo);
+    else document.documentElement.removeAttribute("data-tema");
+  }
+
+  // Icone mostra pra onde o clique leva (igual ao app): sol enquanto esta
+  // no escuro (clique volta pro claro), lua enquanto esta no claro.
+  function atualizarIconeTema() {
+    var efetivo = temaEfetivo();
+    elIconeTemaSol.classList.toggle("escondido", efetivo !== "escuro");
+    elIconeTemaLua.classList.toggle("escondido", efetivo === "escuro");
+    elBotaoTema.title = efetivo === "claro"
+      ? (idiomaAtual === "zh" ? "切换到深色模式" : "Mudar para tema escuro")
+      : (idiomaAtual === "zh" ? "切换到浅色模式" : "Mudar para tema claro");
+  }
+
+  elBotaoTema.addEventListener("click", function () {
+    var novo = temaEfetivo() === "claro" ? "escuro" : "claro";
+    try { localStorage.setItem(CHAVE_TEMA, novo); } catch (e) {}
+    aplicarAtributoTema();
+    atualizarIconeTema();
+  });
+
+  aplicarAtributoTema();
+  atualizarIconeTema();
+
+  // ---- Idioma (PT / chines simplificado) ----
+  // So traduz este painel (dashboard de leitura) - o app desktop dos
+  // conferentes continua so em portugues. Traducao de textos fixos via
+  // atributo data-i18n (aplicarTraducoesEstaticas) + funcoes auxiliares
+  // (t/rotulo*) usadas dentro dos renderizadores dinamicos abaixo, ja que
+  // aqueles remontam o HTML a cada atualizacao e nao passam pelo
+  // data-i18n. Preferencia de idioma fica so no localStorage deste
+  // navegador (nao afeta outros visitantes nem o banco).
+  var CHAVE_IDIOMA = "ecoviva-painel-idioma";
+  var idiomaAtual = "pt";
+  try {
+    var idiomaSalvo = localStorage.getItem(CHAVE_IDIOMA);
+    if (idiomaSalvo === "pt" || idiomaSalvo === "zh") idiomaAtual = idiomaSalvo;
+  } catch (e) {}
+
+  var TRADUCOES = {
+    pt: {
+      gateTitulo: "Painel Ecoviva",
+      gateDescricao: "Acesso restrito - digite a senha combinada com a gestao.",
+      senhaPlaceholder: "Senha",
+      botaoEntrar: "Entrar",
+      senhaIncorreta: "Senha incorreta.",
+      headerTitulo: "Painel Ecoviva - Armazens A4 / B2",
+      badgeSomenteLeitura: "somente leitura",
+      badgeSomenteLeituraTitulo: "Este painel so consegue LER os dados - o acesso usado aqui e um token do banco configurado para nunca aceitar escrita, reforcado pelo proprio servidor do banco (nao e so uma trava no codigo desta pagina). Os dados vem do app oficial de cada armazem, que registra cada lancamento com um hash de auditoria encadeado.",
+      filtroPedidoLabel: "Numero do pedido",
+      filtroPedidoPlaceholder: "Ex: 3893",
+      filtroArmazemLabel: "Armazem",
+      opcaoTodos: "Todos",
+      opcaoTodas: "Todas",
+      fluxoSaidaArmazem: "Saida de Armazem",
+      fluxoMontagem: "Montagem",
+      fluxoSac: "SAC",
+      fluxoReparoExterno: "Reparo Externo",
+      filtroDeLabel: "De",
+      filtroAteLabel: "Ate",
+      atalhoHoje: "Hoje",
+      atalho7dias: "7 dias",
+      atalho30dias: "30 dias",
+      filtroResponsavelLabel: "Responsavel",
+      filtroTipoLabel: "Tipo",
+      tipoEntrada: "Entrada",
+      tipoSaida: "Saida",
+      filtroSituacaoLabel: "Situacao",
+      situacaoBaixa: "Baixa",
+      situacaoEstorno: "Estorno",
+      situacaoRecusado: "Recusado",
+      filtroBuscaLabel: "Busca",
+      filtroBuscaPlaceholder: "Nome ou item",
+      botaoAtualizar: "Atualizar agora",
+      botaoExportarCsv: "Exportar CSV",
+      cartaoSyncTitulo: "Sincronizacao por armazem",
+      cartaoSyncSubtitulo: "Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado.",
+      cartaoInsightsTitulo: "Resumo do periodo filtrado",
+      avisoTruncadoTexto: "Este filtro tem mais movimentos do que o carregado - os numeros abaixo estao incompletos. Reduza o periodo ou refine o filtro pra ver o total real.",
+      graficoVolumeTitulo: "Volume por dia",
+      graficoCategoriasTitulo: "Top categorias de item",
+      graficoArmazemTitulo: "Por armazem",
+      graficoFluxoTitulo: "Por fluxo",
+      cartaoPendentesTitulo: "Transferencias pendentes de confirmacao",
+      cartaoReparosAbertosTitulo: "Reparos externos em aberto",
+      cartaoReparosAbertosSubtitulo: "Pecas que sairam pro tecnico externo e ainda nao voltaram.",
+      nenhuma: "Nenhuma.",
+      cartaoMovimentosTitulo: "Movimentos recentes",
+      colArmazem: "Armazem",
+      colFluxo: "Fluxo",
+      colData: "Data/Hora",
+      colPedido: "Pedido",
+      colColeta: "Coleta",
+      colRazaoSocial: "Razao Social",
+      colItens: "Itens",
+      colQtd: "Qtd.",
+      colRegistradoPor: "Registrado por",
+      colSituacao: "Situacao",
+      colSincronizado: "Sincronizado",
+      coletaEnviadoPara: "Enviado para",
+      coletaRecebidoDe: "Recebido de",
+      montagemMontado: "Montado",
+      montagemCaixa: "Em caixa",
+      montagemOutro: "Outro",
+      estornoRefPedido: "Estorno do pedido",
+      estornoRefHorario: "Estorno do lancamento de",
+      estornoRefNaoEncontrado: "Estorno de um lancamento fora do filtro atual",
+      rodapePagina: "Este painel espelha os dados do app oficial de A4/B2 em tempo quase real - nao e a fonte oficial nem o lugar pra conferir a integridade de um lancamento especifico (cada lancamento tem um hash de auditoria encadeado que fica no app, nao reproduzido aqui).",
+      statusCarregando: "Carregando...",
+      nuncaSincronizou: "nunca sincronizou",
+      tempoAgoraMesmo: "agora mesmo",
+      badgePendente: "pendente",
+      statTileMovimentos: "Movimentos",
+      statTileUnidades: "Unidades",
+      statTilePendentes: "Transferencias pendentes",
+      statTileRecusados: "Recebimentos recusados",
+      statTileTaxaEstorno: "Taxa de estorno",
+      statTileValorVendas: "Valor total (vendas SAC)",
+      statTileValorGarantia: "Valor total (garantias SAC)",
+      statTileMontado: "Saiu montado",
+      statTileCaixa: "Saiu em caixa",
+      semDadosPeriodo: "Sem dados no periodo.",
+      situacaoEstornoBadge: "ESTORNO",
+      situacaoBaixaBadge: "BAIXA",
+      situacaoEntradaBadge: "ENTRADA",
+      situacaoRecusadoBadge: "RECUSADO",
+      divergenciaBadge: "divergencia",
+      modalTituloDetalhe: "Detalhes do movimento",
+      modalCampoObservacoes: "Observacoes",
+      modalRelacionadoOriginal: "Lancamento original (antes do estorno)",
+      modalRelacionadoEstorno: "Estorno deste lancamento",
+      modalRelacionadoEnvioOriginal: "Envio original (armazem de origem)",
+      modalRelacionadoRecebimento: "Confirmacao de recebimento",
+      modalRelacionadoEnvio: "Envio pro reparo externo",
+      modalRelacionadoRetorno: "Retorno do reparo externo"
+    },
+    zh: {
+      gateTitulo: "Ecoviva 面板",
+      gateDescricao: "受限访问 - 请输入与管理层约定的密码。",
+      senhaPlaceholder: "密码",
+      botaoEntrar: "进入",
+      senhaIncorreta: "密码错误。",
+      headerTitulo: "Ecoviva 面板 - A4 / B2 仓库",
+      badgeSomenteLeitura: "只读",
+      badgeSomenteLeituraTitulo: "此面板只能读取数据 - 所用的访问令牌被配置为永不接受写入，并由数据库服务器本身强制执行（不仅仅是本页代码里的限制）。数据来自各仓库的官方应用，每条记录都带有链式审计哈希。",
+      filtroPedidoLabel: "订单号",
+      filtroPedidoPlaceholder: "例如：3893",
+      filtroArmazemLabel: "仓库",
+      opcaoTodos: "全部",
+      opcaoTodas: "全部",
+      fluxoSaidaArmazem: "仓库出库",
+      fluxoMontagem: "组装",
+      fluxoSac: "客服(SAC)",
+      fluxoReparoExterno: "外部维修",
+      filtroDeLabel: "从",
+      filtroAteLabel: "至",
+      atalhoHoje: "今天",
+      atalho7dias: "7天",
+      atalho30dias: "30天",
+      filtroResponsavelLabel: "负责人",
+      filtroTipoLabel: "类型",
+      tipoEntrada: "入库",
+      tipoSaida: "出库",
+      filtroSituacaoLabel: "状态",
+      situacaoBaixa: "出库",
+      situacaoEstorno: "冲销",
+      situacaoRecusado: "拒收",
+      filtroBuscaLabel: "搜索",
+      filtroBuscaPlaceholder: "姓名或物品",
+      botaoAtualizar: "立即刷新",
+      botaoExportarCsv: "导出CSV",
+      cartaoSyncTitulo: "各仓库同步状态",
+      cartaoSyncSubtitulo: "每个仓库最后一次发送数据的时间 - 如果某个仓库长时间未同步，这里显示的数据可能已过时。",
+      cartaoInsightsTitulo: "所选时段汇总",
+      avisoTruncadoTexto: "此筛选条件下的记录数超过已加载的数量 - 以下数字不完整。请缩小时间范围或调整筛选条件以查看真实总数。",
+      graficoVolumeTitulo: "每日数量",
+      graficoCategoriasTitulo: "物品类别排行",
+      graficoArmazemTitulo: "按仓库",
+      graficoFluxoTitulo: "按流程",
+      cartaoPendentesTitulo: "待确认的转运",
+      cartaoReparosAbertosTitulo: "在外维修中的物品",
+      cartaoReparosAbertosSubtitulo: "已送往外部技术人员、尚未返回的物品。",
+      nenhuma: "无。",
+      cartaoMovimentosTitulo: "最近的记录",
+      colArmazem: "仓库",
+      colFluxo: "流程",
+      colData: "日期/时间",
+      colPedido: "订单",
+      colColeta: "去向",
+      colRazaoSocial: "公司名称",
+      colItens: "物品",
+      colQtd: "数量",
+      colRegistradoPor: "登记人",
+      colSituacao: "状态",
+      colSincronizado: "同步时间",
+      coletaEnviadoPara: "已发往",
+      coletaRecebidoDe: "收自",
+      montagemMontado: "已组装",
+      montagemCaixa: "装箱",
+      montagemOutro: "其他",
+      estornoRefPedido: "冲销订单",
+      estornoRefHorario: "冲销的记录时间",
+      estornoRefNaoEncontrado: "冲销的记录不在当前筛选范围内",
+      rodapePagina: "此面板近实时镜像 A4/B2 官方应用的数据 - 它不是官方数据源，也不是核实某条记录完整性的地方（每条记录在官方应用中都有一个链式审计哈希，此处不会重现）。",
+      statusCarregando: "加载中...",
+      nuncaSincronizou: "从未同步",
+      tempoAgoraMesmo: "刚刚",
+      badgePendente: "待处理",
+      statTileMovimentos: "记录数",
+      statTileUnidades: "件数",
+      statTilePendentes: "待确认转运",
+      statTileRecusados: "被拒收次数",
+      statTileTaxaEstorno: "冲销率",
+      statTileValorVendas: "销售总额（SAC）",
+      statTileValorGarantia: "保修总额（SAC）",
+      statTileMontado: "已组装出库",
+      statTileCaixa: "装箱出库",
+      semDadosPeriodo: "该时段无数据。",
+      situacaoEstornoBadge: "冲销",
+      situacaoBaixaBadge: "出库",
+      situacaoEntradaBadge: "入库",
+      situacaoRecusadoBadge: "拒收",
+      divergenciaBadge: "差异",
+      modalTituloDetalhe: "记录详情",
+      modalCampoObservacoes: "备注",
+      modalRelacionadoOriginal: "原始记录（冲销前）",
+      modalRelacionadoEstorno: "本记录的冲销",
+      modalRelacionadoEnvioOriginal: "原始发送（来源仓库）",
+      modalRelacionadoRecebimento: "收货确认",
+      modalRelacionadoEnvio: "发往外部维修",
+      modalRelacionadoRetorno: "外部维修返回"
+    }
+  };
+
+  var ROTULO_FLUXO_IDIOMA = {
+    pt: { saida_armazem: "Saida de Armazem", peca_montagem: "Montagem", sac: "SAC", reparo_externo: "Reparo Externo" },
+    zh: { saida_armazem: "仓库出库", peca_montagem: "组装", sac: "客服(SAC)", reparo_externo: "外部维修" }
+  };
+  // Categorias fixas de item (ver domain::movimentos no app - scooter/
+  // triciclo/patinete/peca/outro, sem catalogo aberto).
+  var ROTULO_CATEGORIA_IDIOMA = {
+    pt: { scooter: "scooter", triciclo: "triciclo", patinete: "patinete", peca: "peca", outro: "outro" },
+    zh: { scooter: "电动踏板车", triciclo: "三轮车", patinete: "滑板车", peca: "零件", outro: "其他" }
+  };
+
+  function t(chave) {
+    var doIdioma = TRADUCOES[idiomaAtual] && TRADUCOES[idiomaAtual][chave];
+    if (doIdioma != null) return doIdioma;
+    var doPt = TRADUCOES.pt[chave];
+    return doPt != null ? doPt : chave;
+  }
+
+  function rotuloFluxo(fluxo) {
+    var mapa = ROTULO_FLUXO_IDIOMA[idiomaAtual] || ROTULO_FLUXO_IDIOMA.pt;
+    return mapa[fluxo] || fluxo;
+  }
+
+  function rotuloCategoria(categoria) {
+    var mapa = ROTULO_CATEGORIA_IDIOMA[idiomaAtual] || ROTULO_CATEGORIA_IDIOMA.pt;
+    return mapa[categoria] || categoria;
+  }
+
+  // Ultimos dados buscados, guardados so pra poder re-renderizar na hora ao
+  // trocar de idioma sem precisar de uma nova consulta ao Turso.
+  var ultimosNomesResponsavelCache = [];
+  var ultimaSincPorArmazemCache = {};
+  var ultimosPendentesCache = [];
+  var ultimosReparosAbertosCache = [];
+
+  function aplicarTraducoesEstaticas() {
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+      el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+      el.title = t(el.getAttribute("data-i18n-title"));
+    });
+    document.documentElement.lang = idiomaAtual === "zh" ? "zh-Hans" : "pt-BR";
+    document.querySelectorAll(".idioma-btn").forEach(function (btn) {
+      btn.classList.toggle("ativo", btn.getAttribute("data-idioma") === idiomaAtual);
+    });
+  }
+
+  function definirIdioma(idioma) {
+    if (idioma !== "pt" && idioma !== "zh") return;
+    idiomaAtual = idioma;
+    try { localStorage.setItem(CHAVE_IDIOMA, idioma); } catch (e) {}
+    aplicarTraducoesEstaticas();
+    atualizarIconeTema();
+    // Re-renderiza os blocos dinamicos (nao passam por data-i18n) com o que
+    // ja tinha sido buscado - so dispara consulta nova se ainda nao tinha
+    // carregado nada (elConteudo escondido, usuario ainda no gate).
+    if (elConteudo && !elConteudo.classList.contains("escondido")) {
+      renderizarOpcoesResponsavel(ultimosNomesResponsavelCache);
+      renderizarStatusArmazens(ultimaSincPorArmazemCache);
+      renderizarPendentes(ultimosPendentesCache);
+      renderizarReparosAbertos(ultimosReparosAbertosCache);
+      if (ultimosFiltrados && ultimosFiltrados.movimentos) reaplicarBusca();
+    }
+  }
+
+  document.querySelectorAll(".idioma-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () { definirIdioma(btn.getAttribute("data-idioma")); });
+  });
+  aplicarTraducoesEstaticas();
+  // So o tooltip do botao de tema depende do idioma - refaz aqui pra pegar
+  // o idioma salvo (o `aplicarAtributoTema`/`atualizarIconeTema` la em cima
+  // ja rodou antes de `idiomaAtual` estar definido, so pra nao esperar pra
+  // aplicar o `data-tema` e evitar flash do tema errado).
+  atualizarIconeTema();
+
+  // Declarados aqui (antes do bloco de autenticacao logo abaixo) de
+  // proposito: numa visita repetida na mesma sessao, as credenciais ja
+  // estao no sessionStorage e isso chama `liberarAcesso() -> iniciar() -> atualizar()` de
+  // forma sincrona, antes do motor de JS chegar nas linhas mais abaixo -
+  // `var` so tem o nome hoisted, nao o valor, entao declarar isso la
+  // embaixo faria essas variaveis chegarem `undefined` nessa primeira
+  // chamada (virava `LIMIT NaN`/`SELECT undefined` na consulta - bug real,
+  // pego testando contra o Turso de verdade antes de commitar).
+  var LIMITE_LINHAS = 2000;
+  // `motivo` foi acrescentada no fim de proposito (nao reordenada junto das
+  // outras) pra minimizar o diff nos indices posicionais que
+  // `linhaParaMovimento` ja usava - ver o comentario la sobre o bug que
+  // `motivo` faltando aqui causou (recusa de recebimento invisivel no
+  // painel, badge sempre caindo pro caso generico "ENTRADA").
+  // `observacoes` acrescentada no fim (indice 16), mesmo cuidado ja usado
+  // pra `motivo` - nao reordena os indices posicionais existentes que
+  // `linhaParaMovimento` ja usa. Carrega o motivo do estorno (justificativa
+  // gravada por `estornar_movimento` no app) e o motivo da recusa
+  // (`recusar_recebimento`) - antes disso, um badge ESTORNO/RECUSADO no
+  // painel nao vinha acompanhado de nenhuma explicacao.
+  // `contraparte` tambem no fim (indice 17) - e o campo "pra quem/onde a
+  // peca foi" (transportadora/cliente numa saida normal, tecnico/oficina no
+  // reparo externo). Sem ele, uma vez que uma transferencia sai da lista de
+  // pendentes (confirmada ou recusada), o destino/cliente some da visao do
+  // painel - so a coluna Coleta (`colunaColeta` abaixo) usa esse campo.
+  // `valor_centavos` no fim tambem (indice 18) - so preenchido no SAC
+  // (motivo "venda"), usado pro stat tile de valor total de vendas abaixo.
+  // `razao_social` no fim (indice 19), mesmo cuidado - so preenchida em
+  // saida_armazem/sac (ver src-tauri/src/domain/movimentos.rs), sem ela a
+  // coluna Razao Social do painel ficava sempre vazia mesmo com o dado
+  // gravado e sincronizado no Turso.
+  var COLUNAS_MOVIMENTO = "armazem_codigo, id_origem, fluxo, tipo, data, hora, usuario_nome, " +
+    "numero_pedido, status, estornado_de, itens_json, armazem_destino_codigo, " +
+    "recebido_de_armazem_codigo, recebido_de_id_origem, enviado_em, motivo, observacoes, contraparte, " +
+    "valor_centavos, razao_social";
+  var ultimosFiltrados = [];
+  var intervaloAtualizacao = null;
+  // Cache da comparacao de periodo (`compararPeriodo` em `atualizar`) - antes
+  // rodava a mesma busca de novo a cada ciclo de 30s (a maioria das aberturas
+  // usa "Hoje" como padrao, que ja tem os dois extremos preenchidos, entao
+  // isso disparava sempre). O periodo *anterior* muda muito pouco minuto a
+  // minuto, entao so refaz a busca quando o periodo pedido mudou ou o cache
+  // ja passou de `INTERVALO_MIN_COMPARACAO_MS`, cortando pela metade o
+  // numero de table scans no Turso a cada atualizacao automatica.
+  var comparacaoCache = { chave: null, insights: null, timestampMs: 0 };
+  var INTERVALO_MIN_COMPARACAO_MS = 5 * 60 * 1000;
+  // Aba de fluxo ativa - "" e "Todos" (visao consolidada, padrao ao abrir),
+  // senao um dos 4 valores de `fluxo` da tabela. Substitui o antigo
+  // <select id="filtro-fluxo"> (removido do HTML) como fonte da verdade
+  // pra esse filtro - ver `selecionarAba` mais abaixo.
+  var abaAtual = "";
+
+  var elGate = document.getElementById("gate");
+  var elConteudo = document.getElementById("conteudo");
+  var elCampoSenha = document.getElementById("campo-senha");
+  var elBotaoEntrar = document.getElementById("botao-entrar");
+  var elErroSenha = document.getElementById("erro-senha");
+
+  function base64ParaBytes(texto) {
+    var binario = atob(texto);
+    var bytes = new Uint8Array(binario.length);
+    for (var i = 0; i < binario.length; i++) bytes[i] = binario.charCodeAt(i);
+    return bytes;
+  }
+
+  // Mesmos parametros de scripts/cifrar-credenciais-painel.mjs: PBKDF2-SHA256
+  // -> AES-GCM 256. Devolve null se a senha estiver errada (o GCM e
+  // autenticado, entao senha errada nunca "decifra" lixo silenciosamente).
+  async function decifrarCredenciais(senha) {
+    if (typeof CREDENCIAIS_CIFRADAS !== "object" || !CREDENCIAIS_CIFRADAS) return null;
+    try {
+      var chaveBase = await crypto.subtle.importKey(
+        "raw", new TextEncoder().encode(senha), "PBKDF2", false, ["deriveKey"]
+      );
+      var chave = await crypto.subtle.deriveKey(
+        {
+          name: "PBKDF2",
+          salt: base64ParaBytes(CREDENCIAIS_CIFRADAS.salt),
+          iterations: CREDENCIAIS_CIFRADAS.iteracoes,
+          hash: "SHA-256"
+        },
+        chaveBase,
+        { name: "AES-GCM", length: 256 },
+        false,
+        ["decrypt"]
+      );
+      var claro = await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: base64ParaBytes(CREDENCIAIS_CIFRADAS.iv) },
+        chave,
+        base64ParaBytes(CREDENCIAIS_CIFRADAS.dados)
+      );
+      var credenciais = JSON.parse(new TextDecoder().decode(claro));
+      return credenciais && credenciais.url && credenciais.token ? credenciais : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function aplicarCredenciais(credenciais) {
+    TURSO_URL = credenciais.url;
+    TURSO_TOKEN = credenciais.token;
+  }
+
+  async function tentarEntrar() {
+    elBotaoEntrar.disabled = true;
+    var credenciais = await decifrarCredenciais(elCampoSenha.value);
+    elBotaoEntrar.disabled = false;
+    if (credenciais) {
+      aplicarCredenciais(credenciais);
+      try { sessionStorage.setItem(CHAVE_SESSAO, JSON.stringify(credenciais)); } catch (e) {}
+      liberarAcesso();
+    } else {
+      elErroSenha.classList.remove("escondido");
+    }
+  }
+
+  function liberarAcesso() {
+    elGate.classList.add("escondido");
+    elConteudo.classList.remove("escondido");
+    iniciar();
+  }
+
+  elBotaoEntrar.addEventListener("click", tentarEntrar);
+  elCampoSenha.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") tentarEntrar();
+  });
+
+  var credenciaisDaSessao = null;
+  try { credenciaisDaSessao = JSON.parse(sessionStorage.getItem(CHAVE_SESSAO) || "null"); } catch (e) {}
+  if (credenciaisDaSessao && credenciaisDaSessao.url && credenciaisDaSessao.token) {
+    aplicarCredenciais(credenciaisDaSessao);
+    liberarAcesso();
+  }
+
+  // ---- Dados ----
+
+  async function executarSql(sql, args) {
+    var resposta = await fetch(TURSO_URL + "/v2/pipeline", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + TURSO_TOKEN,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        requests: [
+          {
+            type: "execute",
+            stmt: {
+              sql: sql,
+              args: (args || []).map(function (valor) {
+                return { type: "text", value: String(valor) };
+              })
+            }
+          },
+          { type: "close" }
+        ]
+      })
+    });
+    if (!resposta.ok) {
+      throw new Error("Turso respondeu " + resposta.status);
+    }
+    var corpo = await resposta.json();
+    var execucao = corpo.results && corpo.results[0];
+    if (!execucao || execucao.type !== "ok") {
+      throw new Error("Resposta inesperada do Turso.");
+    }
+    return execucao.response.result.rows;
+  }
+
+  function linhaParaMovimento(linha) {
+    function v(i) { return linha[i] && linha[i].value !== undefined ? linha[i].value : null; }
+    var itens = [];
+    try { itens = JSON.parse(v(10) || "[]"); } catch (e) { itens = []; }
+    return {
+      armazem_codigo: v(0),
+      id_origem: Number(v(1)),
+      fluxo: v(2),
+      tipo: v(3),
+      data: v(4),
+      hora: v(5),
+      usuario_nome: v(6),
+      numero_pedido: v(7),
+      status: v(8),
+      estornado_de: v(9) != null ? Number(v(9)) : null,
+      itens: itens,
+      armazem_destino_codigo: v(11),
+      recebido_de_armazem_codigo: v(12),
+      recebido_de_id_origem: v(13) != null ? Number(v(13)) : null,
+      enviado_em: v(14),
+      motivo: v(15),
+      observacoes: v(16),
+      contraparte: v(17),
+      valor_centavos: v(18) != null ? Number(v(18)) : null,
+      razao_social: v(19)
+    };
+  }
+
+  // Mesma logica de `colunaColeta` (src/lib/situacao.ts) - "Enviado para" e
+  // ja a coluna Coleta do proprio app pra transferencia entre armazens
+  // (`armazem_destino_codigo` ja vem como o codigo, nao um id, entao nao
+  // precisa de lookup de armazem aqui como no lado Rust/TS), "Recebido de"
+  // pra confirmacao de transferencia, senao a contraparte (transportadora/
+  // cliente/tecnico) ou "-".
+  function colunaColeta(m) {
+    if (m.armazem_destino_codigo) {
+      var destino = t("coletaEnviadoPara") + " " + m.armazem_destino_codigo;
+      return m.contraparte ? destino + " (" + escaparHtml(m.contraparte) + ")" : destino;
+    }
+    if (m.recebido_de_armazem_codigo) return t("coletaRecebidoDe") + " " + m.recebido_de_armazem_codigo;
+    return m.contraparte ? escaparHtml(m.contraparte) : "-";
+  }
+
+  // Sentinela gravado por `domain::movimentos::recusar_recebimento` no app -
+  // ver `MOTIVO_RECUSA_RECEBIMENTO` la. So faz sentido junto com
+  // `recebido_de_armazem_codigo` preenchido (senao colidiria com um motivo
+  // real de SAC, ex.: `garantia`/`venda`, que tambem passa por este campo).
+  function ehRecusaDeRecebimento(m) {
+    return m.motivo === "recusado" && m.recebido_de_armazem_codigo != null;
+  }
+
+  function lerFiltrosDaTela() {
+    return {
+      pedido: document.getElementById("filtro-pedido").value.trim(),
+      armazem: document.getElementById("filtro-armazem").value,
+      fluxo: abaAtual,
+      dataInicio: document.getElementById("filtro-data-inicio").value,
+      dataFim: document.getElementById("filtro-data-fim").value,
+      tipo: document.getElementById("filtro-tipo").value,
+      situacao: document.getElementById("filtro-situacao").value,
+      responsavel: document.getElementById("filtro-responsavel").value
+    };
+  }
+
+  // So os filtros estruturados (armazem/fluxo/data/tipo/situacao) viram
+  // WHERE no SQL - todos vem de <select>/<input type=date>, nunca de texto
+  // livre digitado, entao o valor em si ja e restrito pelo proprio HTML.
+  // Ainda assim usa `args` com bind (nunca concatena o valor na string do
+  // SQL) - o token do Turso aqui e somente-leitura (reforcado pelo
+  // servidor, ver docs/ARQUITETURA.md), mas nao ha motivo pra depender so
+  // disso podendo simplesmente nao concatenar.
+  // Mesma logica de `domain::movimentos::escapar_curinga_like` no app - sem
+  // isso, "%"/"_" digitados no numero do pedido sao tratados como curinga do
+  // SQLite (ex.: buscar "50_1" tambem trazia "5011"), trazendo linha a mais
+  // de forma silenciosa no filtro mais destacado da tela.
+  function escaparCuringaLike(texto) {
+    return texto.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  }
+
+  function montarFiltroSql(filtros) {
+    var condicoes = [];
+    var args = [];
+    if (filtros.pedido) {
+      condicoes.push("numero_pedido LIKE ? ESCAPE '\\'");
+      args.push("%" + escaparCuringaLike(filtros.pedido) + "%");
+    }
+    if (filtros.armazem) { condicoes.push("armazem_codigo = ?"); args.push(filtros.armazem); }
+    if (filtros.fluxo) { condicoes.push("fluxo = ?"); args.push(filtros.fluxo); }
+    if (filtros.dataInicio) { condicoes.push("data >= ?"); args.push(filtros.dataInicio); }
+    if (filtros.dataFim) { condicoes.push("data <= ?"); args.push(filtros.dataFim); }
+    if (filtros.tipo) { condicoes.push("tipo = ?"); args.push(filtros.tipo); }
+    if (filtros.situacao === "estorno") {
+      condicoes.push("estornado_de IS NOT NULL");
+    } else if (filtros.situacao === "baixa") {
+      condicoes.push("tipo = 'saida' AND estornado_de IS NULL");
+    } else if (filtros.situacao === "recusado") {
+      condicoes.push("motivo = 'recusado' AND recebido_de_armazem_codigo IS NOT NULL AND estornado_de IS NULL");
+    } else if (filtros.situacao === "entrada") {
+      // Exclui recusa de recebimento (tambem tipo='entrada') - ela tem sua
+      // propria opcao de filtro/badge, nao deve aparecer como "Entrada" generica.
+      condicoes.push(
+        "tipo = 'entrada' AND estornado_de IS NULL " +
+        "AND NOT (motivo = 'recusado' AND recebido_de_armazem_codigo IS NOT NULL)"
+      );
+    }
+    if (filtros.responsavel) { condicoes.push("usuario_nome = ?"); args.push(filtros.responsavel); }
+    return { where: condicoes.length ? " WHERE " + condicoes.join(" AND ") : "", args: args };
+  }
+
+  // Busca so os lancamentos originais de estornos que NAO vieram no
+  // resultado ja filtrado - acontece sempre que o filtro de Situacao esta
+  // em "Estorno" (o WHERE `estornado_de IS NOT NULL` exclui estruturalmente
+  // o original) ou quando o periodo/paginacao corta o original fora. `faltando`
+  // e uma lista de {armazemCodigo, idOrigem}; retorna vazio sem round-trip
+  // nenhum se nao faltar nada (caso comum - a maioria das telas nao filtra
+  // por estorno).
+  async function buscarReferenciasEstorno(faltando) {
+    if (!faltando.length) return {};
+    var condicoes = [];
+    var args = [];
+    faltando.forEach(function (f) {
+      condicoes.push("(armazem_codigo = ? AND id_origem = ?)");
+      args.push(f.armazemCodigo, f.idOrigem);
+    });
+    var sql = "SELECT armazem_codigo, id_origem, numero_pedido, data, hora FROM movimentos_consolidados WHERE " +
+      condicoes.join(" OR ");
+    var linhas = await executarSql(sql, args);
+    var mapa = {};
+    linhas.forEach(function (linha) {
+      var armazem = linha[0] && linha[0].value;
+      var id = linha[1] && linha[1].value;
+      mapa[armazem + ":" + id] = {
+        numero_pedido: linha[2] && linha[2].value,
+        data: linha[3] && linha[3].value,
+        hora: linha[4] && linha[4].value
+      };
+    });
+    return mapa;
+  }
+
+  // Busca um movimento exato pela chave (armazem_codigo, id_origem) - usado
+  // pelo modal de detalhe (clique numa linha) pra buscar um relacionado que
+  // pode nao estar no filtro/periodo atualmente carregado na tela.
+  async function buscarMovimentoExato(armazemCodigo, idOrigem) {
+    if (armazemCodigo == null || idOrigem == null) return null;
+    var sql = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados WHERE armazem_codigo = ?1 AND id_origem = ?2 LIMIT 1";
+    var linhas = await executarSql(sql, [armazemCodigo, idOrigem]);
+    return linhas.length ? linhaParaMovimento(linhas[0]) : null;
+  }
+
+  // Acha os registros "do outro lado" de `m`, um busca por vez (cada caso e
+  // raro/opcional, entao nao compensa uma query so genericona):
+  // - estorno <-> original (mesmo par que `detalheObservacao` ja usa)
+  // - envio <-> confirmacao de recebimento entre A4/B2
+  // - envio <-> retorno de reparo externo (casado por `codigo_componente`,
+  //   mesma logica de `buscarReparosEmAberto`)
+  // So dispara a consulta pro(s) caso(s) que fazem sentido pros campos de
+  // `m` - a maioria dos movimentos vai cair em zero relacionados (uma venda
+  // comum nao tem par nenhum), e isso e esperado, nao um erro.
+  async function buscarMovimentosRelacionados(m) {
+    var relacionados = [];
+
+    if (m.estornado_de != null) {
+      var original = await buscarMovimentoExato(m.armazem_codigo, m.estornado_de);
+      if (original) relacionados.push({ papel: "modalRelacionadoOriginal", movimento: original });
+    } else {
+      var sqlEstorno = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados WHERE armazem_codigo = ?1 AND estornado_de = ?2 LIMIT 1";
+      var linhasEstorno = await executarSql(sqlEstorno, [m.armazem_codigo, m.id_origem]);
+      if (linhasEstorno.length) relacionados.push({ papel: "modalRelacionadoEstorno", movimento: linhaParaMovimento(linhasEstorno[0]) });
+    }
+
+    if (m.recebido_de_armazem_codigo != null && m.recebido_de_id_origem != null) {
+      var envioOriginal = await buscarMovimentoExato(m.recebido_de_armazem_codigo, m.recebido_de_id_origem);
+      if (envioOriginal) relacionados.push({ papel: "modalRelacionadoEnvioOriginal", movimento: envioOriginal });
+    }
+    if (m.armazem_destino_codigo) {
+      var sqlRecebimento = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados WHERE recebido_de_armazem_codigo = ?1 AND recebido_de_id_origem = ?2 LIMIT 1";
+      var linhasRecebimento = await executarSql(sqlRecebimento, [m.armazem_codigo, m.id_origem]);
+      if (linhasRecebimento.length) relacionados.push({ papel: "modalRelacionadoRecebimento", movimento: linhaParaMovimento(linhasRecebimento[0]) });
+    }
+
+    if (m.fluxo === "reparo_externo" && m.itens[0] && m.itens[0].codigo_componente) {
+      var codigo = m.itens[0].codigo_componente;
+      var tipoOposto = m.tipo === "saida" ? "entrada" : "saida";
+      var sqlReparo = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados " +
+        "WHERE armazem_codigo = ?1 AND fluxo = 'reparo_externo' AND tipo = ?2 AND estornado_de IS NULL LIMIT 200";
+      var linhasReparo = await executarSql(sqlReparo, [m.armazem_codigo, tipoOposto]);
+      var candidato = linhasReparo.map(linhaParaMovimento).find(function (c) {
+        return c.itens.some(function (it) { return it.codigo_componente === codigo; });
+      });
+      if (candidato) {
+        relacionados.push({ papel: tipoOposto === "entrada" ? "modalRelacionadoRetorno" : "modalRelacionadoEnvio", movimento: candidato });
+      }
+    }
+
+    return relacionados;
+  }
+
+  // Movimentos pro periodo/filtro selecionado (tabela + insights). Pede uma
+  // linha a mais que o limite pra saber se foi cortado, sem precisar de um
+  // COUNT(*) separado - mesma ideia ja usada em `buscar_historico` no app.
+  async function buscarMovimentosFiltrados(filtros) {
+    var f = montarFiltroSql(filtros);
+    var sql = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados" + f.where +
+      " ORDER BY data DESC, hora DESC LIMIT " + (LIMITE_LINHAS + 1);
+    var linhas = await executarSql(sql, f.args);
+    var truncado = linhas.length > LIMITE_LINHAS;
+    return { movimentos: linhas.slice(0, LIMITE_LINHAS).map(linhaParaMovimento), truncado: truncado };
+  }
+
+  // Transferencias pendentes de confirmacao: SEMPRE olha a tabela toda,
+  // nunca so o filtro ativo (uma transferencia B2->A4 pendente tem que
+  // aparecer mesmo filtrando so por "A4", que so bateria com o destino, ou
+  // so por "B2", que so bateria com a origem). Mesma logica de
+  // `db::sync::SQL_PENDENTES_RECEBIMENTO` no app (2 NOT EXISTS: nao
+  // confirmada, nao estornada do lado de quem enviou) - replicada aqui em
+  // SQL, nao em JS, pra nao arriscar divergir da fonte da verdade real nem
+  // depender do recorte de outra consulta pra estar completa. O `fluxo IN
+  // (...)` tem que ser mantido igual ao allowlist do lado Rust a mao -
+  // reparo_externo fica de fora de proposito (nao suporta armazem_destino,
+  // so tecnico externo).
+  async function buscarPendentesGlobal() {
+    var sql = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados m " +
+      "WHERE fluxo IN ('peca_montagem', 'saida_armazem', 'sac') " +
+      "AND tipo = 'saida' " +
+      "AND estornado_de IS NULL " +
+      "AND armazem_destino_codigo IS NOT NULL " +
+      "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados x " +
+      "  WHERE x.armazem_codigo = m.armazem_codigo AND x.estornado_de = m.id_origem) " +
+      "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados c " +
+      "  WHERE c.recebido_de_armazem_codigo = m.armazem_codigo AND c.recebido_de_id_origem = m.id_origem) " +
+      "ORDER BY data ASC, hora ASC LIMIT 200";
+    var linhas = await executarSql(sql, []);
+    return linhas.map(linhaParaMovimento);
+  }
+
+  // Mirror de `domain::movimentos::buscar_reparos_em_aberto` (app Rust) -
+  // um item de reparo_externo que saiu (saida nao estornada) e ainda nao tem
+  // uma entrada correspondente valida (nem estorno, nem estornada) com o mesmo
+  // `codigo_componente` no mesmo armazem. La e um NOT EXISTS casando por
+  // `codigo_componente` direto no SQL porque o app tem `movimento_itens`
+  // normalizada; aqui `itens_json` e um blob por movimento, entao busca-se o
+  // fluxo inteiro e o casamento e feito em JS.
+  //
+  // Antes (docs/AUDITORIA.md, COR-01): so as linhas de estorno eram
+  // excluidas - uma saida estornada continuava "em aberto" e uma entrada
+  // estornada continuava contando como "voltou" - e havia um `LIMIT 1000`
+  // sem ORDER BY, que com o tempo cortava linhas arbitrarias. Sem limite
+  // agora: o fluxo de reparo tem volume baixo e a lista precisa ser completa.
+  // Codigo comparado normalizado (trim + maiusculo), igual ao app.
+  // Sempre global (ignora os filtros de armazem/periodo ativos), mesmo
+  // criterio de `buscarPendentesGlobal` acima - e um backlog, nao um
+  // relatorio do periodo.
+  async function buscarReparosEmAberto() {
+    var sql = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados " +
+      "WHERE fluxo = 'reparo_externo' ORDER BY data ASC, hora ASC";
+    var linhas = await executarSql(sql, []);
+    var movimentos = linhas.map(linhaParaMovimento);
+    var normalizar = function (codigo) { return String(codigo || "").trim().toUpperCase(); };
+
+    var estornados = {};
+    movimentos.forEach(function (m) {
+      if (m.estornado_de != null) estornados[m.armazem_codigo + ":" + m.estornado_de] = true;
+    });
+    var validos = movimentos.filter(function (m) {
+      return m.estornado_de == null && !estornados[m.armazem_codigo + ":" + m.id_origem];
+    });
+
+    var codigosRetornados = {};
+    validos.filter(function (m) { return m.tipo === "entrada"; }).forEach(function (m) {
+      m.itens.forEach(function (it) {
+        var codigo = normalizar(it.codigo_componente);
+        if (codigo) codigosRetornados[m.armazem_codigo + ":" + codigo] = true;
+      });
+    });
+    var abertos = [];
+    validos.filter(function (m) { return m.tipo === "saida"; }).forEach(function (m) {
+      m.itens.forEach(function (it) {
+        var codigo = normalizar(it.codigo_componente);
+        if (!codigo) return;
+        if (codigosRetornados[m.armazem_codigo + ":" + codigo]) return;
+        abertos.push({
+          armazem_codigo: m.armazem_codigo,
+          data: m.data,
+          hora: m.hora,
+          codigo_componente: it.codigo_componente,
+          categoria: it.categoria,
+          descricao: it.descricao,
+          quantidade: it.quantidade,
+          contraparte: m.contraparte
+        });
+      });
+    });
+    abertos.sort(function (a, b) { return (a.data + a.hora).localeCompare(b.data + b.hora); });
+    return abertos;
+  }
+
+  // Quantos movimentos cada fluxo tem dentro dos filtros ATIVOS, exceto o
+  // proprio fluxo (pra alimentar o contador de cada aba - "SAC (12)") -
+  // reaproveita `montarFiltroSql` ignorando o campo `fluxo` do filtro
+  // recebido, senao toda aba diferente da atual sempre contaria 0.
+  async function buscarContagemPorFluxo(filtros) {
+    var filtrosSemFluxo = Object.assign({}, filtros, { fluxo: "" });
+    var f = montarFiltroSql(filtrosSemFluxo);
+    var sql = "SELECT fluxo, COUNT(*) FROM movimentos_consolidados" + f.where + " GROUP BY fluxo";
+    var linhas = await executarSql(sql, f.args);
+    var porFluxo = {};
+    linhas.forEach(function (linha) {
+      var fluxo = linha[0] && linha[0].value;
+      var contagem = linha[1] && linha[1].value;
+      if (fluxo) porFluxo[fluxo] = Number(contagem);
+    });
+    return porFluxo;
+  }
+
+  // Armazens fixos do sistema (A4/B2, ver domain::db::mod.rs no app) - lista
+  // curta e conhecida, entao nao precisa de uma consulta separada so pra
+  // descobrir quais existem.
+  var CODIGOS_ARMAZENS = ["A4", "B2"];
+
+  // Ultima vez que cada armazem mandou algo pro Turso, direto da coluna
+  // enviado_em (ja em horario local desde o Sprint 1) - usado pra deixar
+  // visivel quando um armazem esta com sincronizacao atrasada, em vez de so
+  // mostrar o dado antigo dele como se fosse atual.
+  async function buscarUltimaSincronizacaoPorArmazem() {
+    var sql = "SELECT armazem_codigo, MAX(enviado_em) FROM movimentos_consolidados GROUP BY armazem_codigo";
+    var linhas = await executarSql(sql, []);
+    var porArmazem = {};
+    linhas.forEach(function (linha) {
+      var codigo = linha[0] && linha[0].value;
+      var ultimo = linha[1] && linha[1].value;
+      if (codigo) porArmazem[codigo] = ultimo || null;
+    });
+    return porArmazem;
+  }
+
+  function tempoRelativo(dataHora) {
+    if (!dataHora) return null;
+    // "AAAA-MM-DD HH:MM:SS" tratado como horario local (mesmo fuso do
+    // navegador de quem esta vendo o painel - ja e Brasilia dos dois lados
+    // desde o Sprint 1), entao da pra montar um Date diretamente.
+    var partes = dataHora.split(/[- :]/);
+    var data = new Date(partes[0], partes[1] - 1, partes[2], partes[3], partes[4], partes[5]);
+    var diffMin = Math.round((Date.now() - data.getTime()) / 60000);
+    if (diffMin < 1) return t("tempoAgoraMesmo");
+    if (diffMin < 60) return idiomaAtual === "zh" ? diffMin + " 分钟前" : "ha " + diffMin + " min";
+    var diffHoras = Math.round(diffMin / 60);
+    if (diffHoras < 24) return idiomaAtual === "zh" ? diffHoras + " 小时前" : "ha " + diffHoras + "h";
+    var diffDias = Math.round(diffHoras / 24);
+    return idiomaAtual === "zh" ? diffDias + " 天前" : "ha " + diffDias + " dia" + (diffDias > 1 ? "s" : "");
+  }
+
+  function frescor(dataHora) {
+    if (!dataHora) return "frio";
+    var partes = dataHora.split(/[- :]/);
+    var data = new Date(partes[0], partes[1] - 1, partes[2], partes[3], partes[4], partes[5]);
+    var diffMin = (Date.now() - data.getTime()) / 60000;
+    if (diffMin < 15) return "fresco";
+    if (diffMin < 120) return "morno";
+    return "frio";
+  }
+
+  function renderizarStatusArmazens(porArmazem) {
+    ultimaSincPorArmazemCache = porArmazem;
+    var el = document.getElementById("status-armazens");
+    el.innerHTML = CODIGOS_ARMAZENS.map(function (codigo) {
+      var ultimo = porArmazem[codigo];
+      var texto = ultimo
+        ? (idiomaAtual === "zh" ? "同步于 " + tempoRelativo(ultimo) : "sincronizado " + tempoRelativo(ultimo))
+        : t("nuncaSincronizou");
+      var estado = frescor(ultimo);
+      return '<div class="status-armazem ' + estado + '"><span class="ponto ' + estado + '"></span>' +
+        '<span><strong>' + codigo + '</strong>' + texto + '</span></div>';
+    }).join("");
+  }
+
+  // Lista de responsaveis pro filtro dedicado - buscada uma vez (nao a cada
+  // "Atualizar agora"), independente dos filtros ativos, senao o proprio
+  // dropdown ia encolhendo conforme voce filtra.
+  async function buscarResponsaveis() {
+    var linhas = await executarSql(
+      "SELECT DISTINCT usuario_nome FROM movimentos_consolidados WHERE usuario_nome IS NOT NULL ORDER BY usuario_nome",
+      []
+    );
+    return linhas.map(function (linha) { return linha[0] && linha[0].value; }).filter(Boolean);
+  }
+
+  function renderizarOpcoesResponsavel(nomes) {
+    ultimosNomesResponsavelCache = nomes;
+    var el = document.getElementById("filtro-responsavel");
+    var selecionado = el.value;
+    el.innerHTML = '<option value="">' + t("opcaoTodos") + '</option>' + nomes.map(function (nome) {
+      var seguro = escaparHtml(nome);
+      return '<option value="' + seguro + '">' + seguro + "</option>";
+    }).join("");
+    if (nomes.indexOf(selecionado) >= 0) el.value = selecionado;
+  }
+
+  // Texto livre (descricao/observacao/nome/pedido) vem do app, digitado por
+  // um conferente - nunca deve ir cru pro `innerHTML` (achado ao acrescentar
+  // `observacoes` abaixo: varios campos ja faziam isso sem escapar, um XSS
+  // armazenado em potencial se algum desses campos algum dia contiver HTML).
+  function escaparHtml(texto) {
+    return String(texto)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function totalItens(itens) {
+    return itens.reduce(function (s, it) { return s + (it.quantidade || 0); }, 0);
+  }
+
+  // Banco manda data em AAAA-MM-DD (ou "AAAA-MM-DD HH:MM:SS" pra timestamps) -
+  // convertido pro formato brasileiro DD/MM/AAAA por manipulacao de string
+  // (sem `Date`), pra nao arriscar desvio de fuso horario.
+  function formatarData(data) {
+    // pt-BR usa DD/MM/AAAA; zh usa AAAA-MM-DD (o formato ISO que ja vem do
+    // banco), entao nesse caso e so devolver o valor como veio.
+    if (idiomaAtual === "zh") return data;
+    var partes = data.split("-");
+    return partes[2] + "/" + partes[1] + "/" + partes[0];
+  }
+
+  function formatarDataHora(dataHora) {
+    var partes = dataHora.split(" ");
+    return partes[1] ? formatarData(partes[0]) + " " + partes[1] : formatarData(partes[0]);
+  }
+
+  // "Montado"/"Em caixa" - mesmo dado que o app ja captura no formulario de
+  // Saida de Armazem/Montagem (`montagem` no item) mas nunca mostrava em
+  // lugar nenhum depois de lancado, nem no app nem aqui (reportado pelo
+  // usuario: nao dava pra saber quais scooters saiam montadas e quais em
+  // caixa so olhando o historico). Mesma tradução de src/lib/situacao.ts
+  // (`montagemTexto`).
+  function montagemTexto(montagem) {
+    if (montagem === "montado") return t("montagemMontado");
+    if (montagem === "caixa") return t("montagemCaixa");
+    if (montagem === "outro") return t("montagemOutro");
+    return null;
+  }
+
+  function resumoItens(itens) {
+    return itens.map(function (it) {
+      var base = it.quantidade + "x " + rotuloCategoria(it.categoria) + (it.descricao ? " (" + escaparHtml(it.descricao) + ")" : "");
+      var montagem = montagemTexto(it.montagem);
+      if (montagem) base += " [" + montagem + "]";
+      if (it.quantidade_enviada != null && it.quantidade_enviada !== it.quantidade) {
+        base += idiomaAtual === "zh"
+          ? " [差异：发送了 " + it.quantidade_enviada + "]"
+          : " [divergencia: enviado " + it.quantidade_enviada + "]";
+      }
+      return base;
+    }).join(" + ");
+  }
+
+  function temDivergencia(itens) {
+    return itens.some(function (it) {
+      return it.quantidade_enviada != null && it.quantidade_enviada !== it.quantidade;
+    });
+  }
+
+  // Mesma derivacao de src/lib/situacao.ts (situacaoInfo) - portada aqui
+  // porque este arquivo e standalone, sem import: estorno > baixa (saida) >
+  // entrada. Substitui o `m.status` cru do banco ("aberto"/"estorno"), que
+  // nao e o vocabulario ENTRADA/BAIXA/ESTORNO usado no resto do app.
+  function situacaoValor(m) {
+    if (m.estornado_de != null) return "estorno";
+    if (ehRecusaDeRecebimento(m)) return "recusado";
+    return m.tipo === "saida" ? "baixa" : "entrada";
+  }
+
+  // Mesmas 4 classes/cores de badge usadas em src/styles/global.css
+  // (.badge-entrada/.badge-baixa/.badge-estorno/.badge-recusado) - o painel
+  // espelha o app, entao usa o mesmo vocabulario visual pra quem olha os dois.
+  function situacaoBadge(m) {
+    var valor = situacaoValor(m);
+    if (valor === "estorno") return '<span class="badge badge-estorno">' + t("situacaoEstornoBadge") + '</span>';
+    if (valor === "baixa") return '<span class="badge badge-baixa">' + t("situacaoBaixaBadge") + '</span>';
+    if (valor === "recusado") return '<span class="badge badge-recusado">' + t("situacaoRecusadoBadge") + '</span>';
+    return '<span class="badge badge-entrada">' + t("situacaoEntradaBadge") + '</span>';
+  }
+
+  function renderizarPendentes(pendentes) {
+    ultimosPendentesCache = pendentes;
+    var el = document.getElementById("lista-pendentes");
+    if (pendentes.length === 0) {
+      el.innerHTML = "<p>" + t("nenhuma") + "</p>";
+      return;
+    }
+    el.innerHTML = pendentes.map(function (m) {
+      // "AAAA-MM-DD" + "HH:MM" concatenados no mesmo formato que
+      // `tempoRelativo` espera ("AAAA-MM-DD HH:MM:SS") - da pra saber ha
+      // quanto tempo uma transferencia esta parada, nao so quando foi
+      // enviada. Uma pendente de uma semana parecia igual a uma de uma hora.
+      var haQuanto = tempoRelativo(m.data + " " + m.hora + ":00");
+      return '<p><span class="badge badge-pendente">' + t("badgePendente") + '</span> ' +
+        m.armazem_codigo + " &rarr; " + (m.armazem_destino_codigo || "?") + " - " +
+        formatarData(m.data) + " " + m.hora +
+        (haQuanto ? " (" + haQuanto + ")" : "") + " - " + resumoItens(m.itens) + "</p>";
+    }).join("");
+  }
+
+  function renderizarReparosAbertos(abertos) {
+    ultimosReparosAbertosCache = abertos;
+    var el = document.getElementById("lista-reparos-abertos");
+    if (abertos.length === 0) {
+      el.innerHTML = "<p>" + t("nenhuma") + "</p>";
+      return;
+    }
+    el.innerHTML = abertos.map(function (r) {
+      var haQuanto = tempoRelativo(r.data + " " + r.hora + ":00");
+      var descricaoSegura = r.descricao ? " (" + escaparHtml(r.descricao) + ")" : "";
+      return '<p><span class="badge badge-pendente">' + t("badgePendente") + '</span> ' +
+        r.armazem_codigo + " - " + escaparHtml(r.codigo_componente) + " - " +
+        r.quantidade + "x " + rotuloCategoria(r.categoria) + descricaoSegura +
+        (r.contraparte ? " - " + escaparHtml(r.contraparte) : "") + " - " +
+        formatarData(r.data) + " " + r.hora +
+        (haQuanto ? " (" + haQuanto + ")" : "") + "</p>";
+    }).join("");
+  }
+
+  function renderizarContagemAbas(porFluxo) {
+    var total = 0;
+    Object.keys(porFluxo).forEach(function (f) { total += porFluxo[f]; });
+    document.querySelectorAll(".aba-fluxo").forEach(function (botao) {
+      var fluxo = botao.getAttribute("data-fluxo");
+      var el = botao.querySelector(".aba-fluxo-contagem");
+      if (!el) return;
+      el.textContent = fluxo ? (porFluxo[fluxo] || 0) : total;
+    });
+  }
+
+  // Os filtros estruturados ja foram aplicados na consulta SQL - aqui so
+  // sobra a busca livre (pedido/nome/item), que roda em cima do resultado
+  // ja filtrado, sem precisar de nova consulta a cada tecla digitada.
+  // Numero do pedido tem campo proprio agora (filtra no SQL, ver
+  // montarFiltroSql) - aqui so sobra nome/item.
+  function aplicarBusca(movimentos) {
+    var busca = document.getElementById("filtro-busca").value.trim().toLowerCase();
+    if (!busca) return movimentos;
+    return movimentos.filter(function (m) {
+      var noNome = (m.usuario_nome || "").toLowerCase().indexOf(busca) >= 0;
+      var noItem = m.itens.some(function (it) {
+        return (it.descricao || "").toLowerCase().indexOf(busca) >= 0;
+      });
+      return noNome || noItem;
+    });
+  }
+
+  // So mostra a observacao pra estorno/recusado - e onde ela carrega a
+  // explicacao do que aconteceu (justificativa do estorno, motivo da
+  // recusa); nos outros casos normalmente e so instrucao de transferencia
+  // ja resolvida, menos critica pra quem so esta olhando o historico.
+  // Registros gravados antes da v3.0.0 do app tinham "ESTORNO do
+  // lancamento #<id>: <motivo>" dentro da propria observacoes - o <id> e o
+  // id interno do banco (`estornado_de`/`id_origem`), que nao aparece em
+  // NENHUMA tela (nem aqui, nem no app) - "estorno do lancamento #147"
+  // nao da pra descobrir qual foi. A partir da v3.0.0 o app so grava o
+  // motivo puro ali; aqui removemos o prefixo antigo se existir, pra nunca
+  // mostrar esse id sem contexto - a referencia de verdade vem de
+  // `detalheObservacao` abaixo, resolvida contra o proprio `id_origem`.
+  function justificativaLimpa(m) {
+    return (m.observacoes || "")
+      .replace(/^ESTORNO do lancamento #\d+:\s*/, "")
+      .replace(/^RECUSADO - /, "");
+  }
+
+  function detalheObservacao(m) {
+    var valor = situacaoValor(m);
+    if (valor !== "estorno" && valor !== "recusado") return "";
+    var motivo = justificativaLimpa(m);
+    if (valor === "recusado") {
+      return motivo ? ' <span class="obs-detalhe">- ' + escaparHtml(motivo) + "</span>" : "";
+    }
+    // Acha o lancamento original no proprio resultado ja carregado (mesmo
+    // armazem, id_origem == estornado_de) e mostra algo que da pra procurar
+    // na tabela - o numero do pedido, ou data/hora se nao tiver pedido
+    // (Montagem nunca tem). Se o original nao estiver no filtro atual
+    // (situacao/periodo restringiu demais), avisa em vez de nao mostrar nada.
+    var original = (ultimosFiltrados.movimentos || []).find(function (o) {
+      return o.armazem_codigo === m.armazem_codigo && o.id_origem === m.estornado_de;
+    });
+    if (!original && ultimosFiltrados.referenciasEstorno) {
+      original = ultimosFiltrados.referenciasEstorno[m.armazem_codigo + ":" + m.estornado_de];
+    }
+    var referencia;
+    if (original && original.numero_pedido) {
+      referencia = t("estornoRefPedido") + " " + escaparHtml(original.numero_pedido);
+    } else if (original) {
+      referencia = t("estornoRefHorario") + " " + formatarData(original.data) + " " + original.hora;
+    } else {
+      referencia = t("estornoRefNaoEncontrado");
+    }
+    return ' <span class="obs-detalhe">- ' + referencia + (motivo ? ": " + escaparHtml(motivo) : "") + "</span>";
+  }
+
+  // Guardada aqui pra o clique na linha (delegado, ver `abrirDetalheDoClique`
+  // em `iniciar`) achar o objeto `m` completo so pela chave armazem+id_origem
+  // que fica em `data-armazem`/`data-id-origem` - sem precisar de um
+  // listener por `<tr>` (o corpo da tabela e reconstruido inteiro a cada
+  // `atualizar`/busca, entao listeners individuais teriam que ser
+  // re-anexados toda vez).
+  var ultimaListaRenderizada = [];
+
+  function renderizarTabela(filtrados, totalSemBusca, truncado) {
+    ultimaListaRenderizada = filtrados;
+    var corpo = document.getElementById("corpo-tabela");
+    corpo.innerHTML = filtrados.map(function (m) {
+      var divergencia = temDivergencia(m.itens)
+        ? ' <span class="badge badge-divergencia">' + t("divergenciaBadge") + '</span>'
+        : "";
+      var sincronizado = m.enviado_em
+        ? '<td class="col-sincronizado" data-label="' + t("colSincronizado") + '" title="' + escaparHtml(formatarDataHora(m.enviado_em)) + '">' + tempoRelativo(m.enviado_em) + "</td>"
+        : '<td class="col-sincronizado" data-label="' + t("colSincronizado") + '">-</td>';
+      var nomeSeguro = escaparHtml(m.usuario_nome || "");
+      var pedidoSeguro = escaparHtml(m.numero_pedido || "-");
+      // `data-label` alimenta o rotulo de cada campo no layout "cartao"
+      // usado em tela estreita (ver o @media (max-width: 720px) - o
+      // pseudo-elemento `td::before { content: attr(data-label) }` le
+      // daqui). Sem efeito nenhum acima do breakpoint.
+      return '<tr class="linha-clicavel" data-armazem="' + m.armazem_codigo + '" data-id-origem="' + m.id_origem + '">' +
+        '<td class="col-armazem" data-label="' + t("colArmazem") + '">' + m.armazem_codigo + "</td>" +
+        '<td class="col-fluxo" data-label="' + t("colFluxo") + '">' + rotuloFluxo(m.fluxo) + "</td>" +
+        '<td class="col-datahora" data-label="' + t("colData") + '" title="' + formatarData(m.data) + " " + m.hora + '">' + formatarData(m.data) + " " + m.hora + "</td>" +
+        '<td class="col-pedido" data-label="' + t("colPedido") + '">' + pedidoSeguro + "</td>" +
+        '<td class="col-coleta" data-label="' + t("colColeta") + '">' + colunaColeta(m) + "</td>" +
+        '<td class="col-razaosocial" data-label="' + t("colRazaoSocial") + '">' + (m.razao_social ? escaparHtml(m.razao_social) : "-") + "</td>" +
+        '<td class="col-itens" data-label="' + t("colItens") + '">' + resumoItens(m.itens) + divergencia + detalheObservacao(m) + "</td>" +
+        '<td class="col-qtd" data-label="' + t("colQtd") + '">' + totalItens(m.itens) + "</td>" +
+        '<td class="col-registrado" data-label="' + t("colRegistradoPor") + '" title="' + nomeSeguro + '">' + nomeSeguro + "</td>" +
+        '<td class="col-situacao" data-label="' + t("colSituacao") + '">' + situacaoBadge(m) + "</td>" +
+        sincronizado +
+        "</tr>";
+    }).join("");
+    var rodape = idiomaAtual === "zh"
+      ? "当前筛选条件下：" + totalSemBusca + " 条中显示 " + filtrados.length + " 条。"
+      : filtrados.length + " de " + totalSemBusca + " movimentos no filtro atual.";
+    if (truncado) {
+      rodape += idiomaAtual === "zh"
+        ? " 所选筛选条件下的记录超过 " + LIMITE_LINHAS + " 条 - 部分较早的记录未显示。请缩小时间范围以查看全部。"
+        : " O filtro selecionado tem mais de " + LIMITE_LINHAS +
+          " movimentos - alguns dos mais antigos nao estao sendo mostrados. Reduza o periodo pra ver tudo.";
+    }
+    document.getElementById("rodape-tabela").textContent = rodape;
+  }
+
+  // Uma linha "rotulo: valor" do modal de detalhe - omite o campo inteiro
+  // quando vazio (em vez de mostrar "Pedido: -" pra todo campo opcional que
+  // esse movimento nao tem).
+  function campoModal(rotulo, valor) {
+    if (valor == null || valor === "") return "";
+    return '<div class="modal-campo"><span class="rotulo-campo">' + rotulo + "</span><span>" + valor + "</span></div>";
+  }
+
+  // Um "cartao" dentro do modal com todos os campos de um movimento -
+  // reusado tanto pro movimento clicado quanto pra cada relacionado
+  // encontrado por `buscarMovimentosRelacionados`. Reaproveita os mesmos
+  // helpers ja usados na tabela principal (`colunaColeta`/`resumoItens`/
+  // `situacaoBadge`), entao o texto no modal e sempre consistente com o que
+  // a tabela mostra pro mesmo movimento.
+  function renderizarRegistroModal(m, tituloChave) {
+    var titulo = tituloChave ? "<h4>" + t(tituloChave) + "</h4>" : "";
+    var campos = [
+      campoModal(t("colArmazem"), m.armazem_codigo),
+      campoModal(t("colFluxo"), rotuloFluxo(m.fluxo)),
+      campoModal(t("colData"), formatarData(m.data) + " " + m.hora),
+      campoModal(t("colPedido"), m.numero_pedido ? escaparHtml(m.numero_pedido) : null),
+      campoModal(t("colColeta"), colunaColeta(m)),
+      campoModal(t("colRazaoSocial"), m.razao_social ? escaparHtml(m.razao_social) : null),
+      campoModal(t("colItens"), resumoItens(m.itens)),
+      campoModal(t("colRegistradoPor"), m.usuario_nome ? escaparHtml(m.usuario_nome) : null),
+      campoModal(t("colSituacao"), situacaoBadge(m)),
+      campoModal(t("modalCampoObservacoes"), m.observacoes ? escaparHtml(justificativaLimpa(m)) : null),
+      campoModal(t("colSincronizado"), m.enviado_em ? formatarDataHora(m.enviado_em) : null)
+    ].join("");
+    return '<div class="modal-registro">' + titulo + campos + "</div>";
+  }
+
+  // Clique numa linha da tabela abre este modal: o registro clicado mais
+  // qualquer relacionado encontrado (busca so ao clicar, nao pre-carregado
+  // pra toda a tabela - ver `buscarMovimentosRelacionados`). A maioria dos
+  // movimentos nao tem nenhum relacionado, e isso e o esperado (uma venda
+  // comum e um registro isolado) - o modal so mostra o que existir.
+  async function abrirDetalhe(m) {
+    var overlay = document.getElementById("modal-detalhe");
+    var conteudo = document.getElementById("modal-detalhe-conteudo");
+    conteudo.innerHTML = "<h3>" + t("modalTituloDetalhe") + "</h3>" + renderizarRegistroModal(m, null) +
+      "<p>" + t("statusCarregando") + "</p>";
+    overlay.classList.remove("escondido");
+    var relacionados = await buscarMovimentosRelacionados(m);
+    var htmlRelacionados = relacionados.map(function (r) { return renderizarRegistroModal(r.movimento, r.papel); }).join("");
+    conteudo.innerHTML = "<h3>" + t("modalTituloDetalhe") + "</h3>" + renderizarRegistroModal(m, null) + htmlRelacionados;
+  }
+
+  function fecharDetalhe() {
+    document.getElementById("modal-detalhe").classList.add("escondido");
+  }
+
+  // Mesma convencao de `src/lib/csv.ts` (app Tauri): separador `;` (nao `,`
+  // - Excel em locale PT-BR usa `,` como separador decimal), BOM UTF-8 pro
+  // Excel reconhecer acentuacao ao abrir por duplo-clique, `\r\n`. So CSV
+  // (sem XLSX/SheetJS) de proposito - o painel e um arquivo unico sem
+  // build step nem dependencia externa, e uma lib de planilha so pra isso
+  // quebraria essa premissa; CSV o Excel abre igual.
+  function escaparCsv(valor) {
+    var texto = valor == null ? "" : String(valor);
+    if (/[;"\n]/.test(texto)) return '"' + texto.replace(/"/g, '""') + '"';
+    return texto;
+  }
+
+  // Mesma logica de `colunaColeta`/`resumoItens` acima, sem HTML/escaparHtml
+  // (o CSV tem sua propria fuga via `escaparCsv`, nao precisa de entidades
+  // HTML como "&amp;").
+  function linhaCsvColeta(m) {
+    if (m.armazem_destino_codigo) {
+      var destino = t("coletaEnviadoPara") + " " + m.armazem_destino_codigo;
+      return m.contraparte ? destino + " (" + m.contraparte + ")" : destino;
+    }
+    if (m.recebido_de_armazem_codigo) return t("coletaRecebidoDe") + " " + m.recebido_de_armazem_codigo;
+    return m.contraparte || "-";
+  }
+
+  function linhaCsvItens(itens) {
+    return itens.map(function (it) {
+      var base = it.quantidade + "x " + rotuloCategoria(it.categoria) + (it.descricao ? " (" + it.descricao + ")" : "");
+      var montagem = montagemTexto(it.montagem);
+      return montagem ? base + " [" + montagem + "]" : base;
+    }).join(" + ");
+  }
+
+  var SITUACAO_CSV_CHAVE = {
+    estorno: "situacaoEstornoBadge",
+    baixa: "situacaoBaixaBadge",
+    recusado: "situacaoRecusadoBadge",
+    entrada: "situacaoEntradaBadge"
+  };
+
+  // Exporta exatamente o que esta na tela (filtro + aba + busca ativos),
+  // respeitando as mesmas colunas que a aba atual mostra (ver
+  // `#conteudo[data-aba-atual]` no <style> - Fluxo so em "Todos", Razao
+  // Social so em Saida de Armazem/SAC) - pra nao exportar uma coluna vazia
+  // que a propria tela ja escondeu por nao se aplicar aquele fluxo.
+  function exportarCsv() {
+    var movimentos = aplicarBusca((ultimosFiltrados && ultimosFiltrados.movimentos) || []);
+    var incluirFluxo = abaAtual === "";
+    var incluirRazaoSocial = abaAtual === "" || abaAtual === "saida_armazem" || abaAtual === "sac";
+
+    var cabecalhos = [t("colArmazem")];
+    if (incluirFluxo) cabecalhos.push(t("colFluxo"));
+    cabecalhos.push(t("colData"), t("colPedido"), t("colColeta"));
+    if (incluirRazaoSocial) cabecalhos.push(t("colRazaoSocial"));
+    cabecalhos.push(t("colItens"), t("colQtd"), t("colRegistradoPor"), t("colSituacao"));
+
+    var linhas = movimentos.map(function (m) {
+      var linha = [m.armazem_codigo];
+      if (incluirFluxo) linha.push(rotuloFluxo(m.fluxo));
+      linha.push(formatarData(m.data) + " " + m.hora, m.numero_pedido || "-", linhaCsvColeta(m));
+      if (incluirRazaoSocial) linha.push(m.razao_social || "-");
+      linha.push(
+        linhaCsvItens(m.itens),
+        String(totalItens(m.itens)),
+        m.usuario_nome || "-",
+        t(SITUACAO_CSV_CHAVE[situacaoValor(m)])
+      );
+      return linha;
+    });
+
+    var texto = "﻿" + [cabecalhos].concat(linhas).map(function (linha) {
+      return linha.map(escaparCsv).join(";");
+    }).join("\r\n");
+
+    var blob = new Blob([texto], { type: "text/csv;charset=utf-8" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    var nomeAba = abaAtual ? rotuloFluxo(abaAtual) : t("opcaoTodos");
+    link.href = url;
+    link.download = "Painel Ecoviva - " + nomeAba + " - " + dataIso(new Date()) + ".csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function calcularInsights(filtrados, pendentesCount) {
+    var porDia = {}, porCategoria = {}, porArmazem = {}, porFluxo = {};
+    var totalEstorno = 0, totalRecusado = 0, totalUnidades = 0, totalEntrada = 0, totalSaida = 0;
+    // So soma venda de estorno/recusa fora (nao e uma venda de verdade
+    // acontecendo) - mesmo criterio das outras somas acima.
+    var totalVendasCentavos = 0;
+    // Valor de garantia (SAC saida - `valor_centavos` passou a ser
+    // obrigatorio pra garantia, nao so venda, ver CLAUDE.md/domain/
+    // movimentos.rs) - sem isto nao dava pra saber quanto saiu do SAC em
+    // garantias no dia, so em vendas. So existe do lado saida (entrada de
+    // garantia, a devolucao do cliente, nunca carrega valor).
+    var totalGarantiaCentavos = 0;
+    // Quantos veiculos saíram montados vs em caixa (item.montagem) - so conta
+    // saida de verdade (nao estorno/recusa, mesmo criterio de totalSaida
+    // acima), pra responder "quantas scooters saíram em caixa hoje?" sem
+    // precisar contar linha por linha na tabela.
+    var totalMontado = 0, totalCaixa = 0;
+    filtrados.forEach(function (m) {
+      var qtd = totalItens(m.itens);
+      totalUnidades += qtd;
+      porDia[m.data] = (porDia[m.data] || 0) + qtd;
+      porArmazem[m.armazem_codigo] = (porArmazem[m.armazem_codigo] || 0) + qtd;
+      porFluxo[m.fluxo] = (porFluxo[m.fluxo] || 0) + qtd;
+      if (m.estornado_de != null) {
+        totalEstorno += 1;
+      } else if (ehRecusaDeRecebimento(m)) {
+        // Nao entra em totalEntrada - conta separado, senao "Entrada" fica
+        // inflado com recusas (que nao sao um recebimento de verdade).
+        totalRecusado += 1;
+      } else if (m.tipo === "saida") {
+        totalSaida += qtd;
+        m.itens.forEach(function (it) {
+          if (it.montagem === "montado") totalMontado += it.quantidade || 0;
+          else if (it.montagem === "caixa") totalCaixa += it.quantidade || 0;
+        });
+        // motivo "venda" tambem existe em saida do SAC (peca vendida como
+        // destino, nao so devolucao de cliente) - sem isto, "Valor total
+        // (vendas SAC)" ficava faltando as vendas do lado de saida.
+        if (m.motivo === "venda" && m.valor_centavos) totalVendasCentavos += m.valor_centavos;
+        if (m.motivo === "garantia" && m.valor_centavos) totalGarantiaCentavos += m.valor_centavos;
+      } else {
+        totalEntrada += qtd;
+        if (m.motivo === "venda" && m.valor_centavos) totalVendasCentavos += m.valor_centavos;
+      }
+      m.itens.forEach(function (it) {
+        porCategoria[it.categoria] = (porCategoria[it.categoria] || 0) + (it.quantidade || 0);
+      });
+    });
+    return {
+      porDia: porDia,
+      porCategoria: porCategoria,
+      porArmazem: porArmazem,
+      porFluxo: porFluxo,
+      totalMovimentos: filtrados.length,
+      totalUnidades: totalUnidades,
+      totalEntrada: totalEntrada,
+      totalSaida: totalSaida,
+      totalRecusado: totalRecusado,
+      totalVendasCentavos: totalVendasCentavos,
+      totalGarantiaCentavos: totalGarantiaCentavos,
+      totalMontado: totalMontado,
+      totalCaixa: totalCaixa,
+      taxaEstorno: filtrados.length ? (totalEstorno / filtrados.length) : 0,
+      pendentesCount: pendentesCount
+    };
+  }
+
+  function formatarMoeda(centavos) {
+    // pt-BR pra ter separador de milhar (ponto) alem da virgula decimal -
+    // e sempre Real (a moeda do sistema), independente do idioma da UI.
+    var valor = (centavos / 100).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return idiomaAtual === "zh" ? "R$" + valor : "R$ " + valor;
+  }
+
+  // Cores fixas por chave conhecida (nao por posicao/ordem), pra cada
+  // armazem/categoria/fluxo sempre aparecer com a mesma cor em qualquer
+  // grafico, independente do filtro ativo ou da ordem de classificacao.
+  var CORES_ARMAZEM = { A4: "var(--grafico-1)", B2: "var(--grafico-5)" };
+  var CORES_FLUXO = {
+    saida_armazem: "var(--grafico-1)",
+    peca_montagem: "var(--grafico-4)",
+    sac: "var(--grafico-6)",
+    reparo_externo: "var(--grafico-8)"
+  };
+  var CORES_CATEGORIA = {
+    scooter: "var(--grafico-2)",
+    triciclo: "var(--grafico-3)",
+    patinete: "var(--grafico-4)",
+    peca: "var(--grafico-1)",
+    outro: "var(--grafico-7)"
+  };
+
+  function svgBarraHorizontal(valor, max, cor) {
+    var largura = max > 0 ? Math.round((valor / max) * 100) : 0;
+    return '<svg viewBox="0 0 100 16" preserveAspectRatio="none">' +
+      '<rect x="0" y="2" width="100" height="12" fill="var(--borda)" rx="2"></rect>' +
+      '<rect x="0" y="2" width="' + largura + '" height="12" fill="' + (cor || "var(--verde)") + '" rx="2"></rect>' +
+      '</svg>';
+  }
+
+  // Cada tile so aparece nas abas listadas em `abas` ("" = Todos) - `null`
+  // significa "em qualquer aba" (metrica universal). Sem isso, filtrar pra
+  // Montagem sempre mostrava "Valor total (vendas SAC): R$ 0,00" (motivo/
+  // valor_centavos so existem em SAC) e filtrar pra SAC sempre mostrava
+  // "Saiu montado"/"Saiu em caixa" zerados (montagem de item so existe em
+  // saida_armazem/peca_montagem, ver CLAUDE.md) - ruido constante que a
+  // separacao em abas existe justamente pra eliminar.
+  // Compara com o valor equivalente do periodo imediatamente anterior, de
+  // mesmo tamanho (ver `periodoAnterior`) - so pras 4 metricas de contagem
+  // pura (Movimentos/Unidades/Entrada/Saida), onde "valor" ja e o numero
+  // crua exibido (nao uma string formatada como Taxa de Estorno/Valor). Sem
+  // cor semantica de proposito - mais ou menos movimento nao e bom nem mau
+  // por si so, e so contexto de tendencia.
+  function deltaTexto(atual, anterior) {
+    if (anterior == null) return "";
+    if (anterior === 0) return atual > 0 ? ' <span class="tile-delta">▲</span>' : "";
+    var pct = Math.round(((atual - anterior) / anterior) * 100);
+    if (pct === 0) return "";
+    return ' <span class="tile-delta">' + (pct > 0 ? "▲" : "▼") + " " + Math.abs(pct) + "%</span>";
+  }
+
+  function construirStatTiles(dados) {
+    return [
+      { chave: "statTileMovimentos", valor: dados.totalMovimentos, abas: null, comparar: "totalMovimentos" },
+      { chave: "statTileUnidades", valor: dados.totalUnidades, abas: null, comparar: "totalUnidades" },
+      { chave: "tipoEntrada", valor: dados.totalEntrada, abas: null, comparar: "totalEntrada" },
+      { chave: "tipoSaida", valor: dados.totalSaida, abas: null, comparar: "totalSaida" },
+      { chave: "statTilePendentes", valor: dados.pendentesCount, abas: ["", "saida_armazem", "peca_montagem", "sac"] },
+      // Recusados e taxa de estorno sao metricas negativas - nao fazem
+      // sentido na mesma cor verde usada pras demais (neutras/positivas),
+      // reaproveita as mesmas cores que badge-recusado/badge-estorno ja
+      // usam na tabela pra essa mesma situacao.
+      { chave: "statTileRecusados", valor: dados.totalRecusado, classe: "aviso", abas: ["", "saida_armazem", "peca_montagem", "sac"] },
+      { chave: "statTileTaxaEstorno", valor: (dados.taxaEstorno * 100).toFixed(1) + "%", classe: "erro", abas: null },
+      { chave: "statTileValorVendas", valor: formatarMoeda(dados.totalVendasCentavos), abas: ["", "sac"] },
+      { chave: "statTileValorGarantia", valor: formatarMoeda(dados.totalGarantiaCentavos), abas: ["", "sac"] },
+      { chave: "statTileMontado", valor: dados.totalMontado, abas: ["", "saida_armazem", "peca_montagem"] },
+      { chave: "statTileCaixa", valor: dados.totalCaixa, abas: ["", "saida_armazem", "peca_montagem"] }
+    ];
+  }
+
+  function renderizarInsights(filtrados, pendentesCount, comparacaoInsights) {
+    var dados = calcularInsights(filtrados, pendentesCount);
+    document.getElementById("grade-stats").innerHTML = construirStatTiles(dados)
+      .filter(function (item) { return !item.abas || item.abas.indexOf(abaAtual) >= 0; })
+      .map(function (item) {
+        var classeValor = "valor" + (item.classe ? " " + item.classe : "");
+        var delta = (item.comparar && comparacaoInsights) ? deltaTexto(item.valor, comparacaoInsights[item.comparar]) : "";
+        return '<div class="stat-tile"><div class="' + classeValor + '">' + item.valor + delta + '</div><div class="rotulo">' + t(item.chave) + '</div></div>';
+      }).join("");
+
+    renderizarBarras("grafico-volume", dados.porDia, Object.keys(dados.porDia).sort(), formatarData);
+    var categorias = Object.keys(dados.porCategoria).sort(function (a, b) {
+      return dados.porCategoria[b] - dados.porCategoria[a];
+    });
+    renderizarBarras("grafico-categorias", dados.porCategoria, categorias, rotuloCategoria, function (c) {
+      return CORES_CATEGORIA[c];
+    });
+
+    // So faz sentido comparar armazem/fluxo quando o filtro ativo nao ja
+    // restringiu a um so - com um so armazem/fluxo no resultado a
+    // comparacao vira um grafico de uma barra so, sem informacao nova.
+    var blocoArmazem = document.getElementById("bloco-por-armazem");
+    var chavesArmazem = Object.keys(dados.porArmazem);
+    if (chavesArmazem.length > 1) {
+      blocoArmazem.classList.remove("escondido");
+      renderizarBarras("grafico-armazem", dados.porArmazem, chavesArmazem.sort(), function (c) { return c; }, function (c) {
+        return CORES_ARMAZEM[c];
+      });
+    } else {
+      blocoArmazem.classList.add("escondido");
+    }
+
+    var blocoFluxo = document.getElementById("bloco-por-fluxo");
+    var chavesFluxo = Object.keys(dados.porFluxo);
+    if (chavesFluxo.length > 1) {
+      blocoFluxo.classList.remove("escondido");
+      renderizarBarras("grafico-fluxo", dados.porFluxo, chavesFluxo.sort(), rotuloFluxo, function (f) {
+        return CORES_FLUXO[f];
+      });
+    } else {
+      blocoFluxo.classList.add("escondido");
+    }
+  }
+
+  // `corPara` e opcional - quando omitido (grafico "Volume por dia", uma
+  // serie temporal, nao uma comparacao entre entidades) todas as barras
+  // ficam verdes, como antes.
+  function renderizarBarras(elId, valores, chaves, rotular, corPara) {
+    var max = Math.max.apply(null, chaves.map(function (c) { return valores[c]; }).concat([1]));
+    document.getElementById(elId).innerHTML = chaves.map(function (c) {
+      var cor = corPara ? corPara(c) : null;
+      return '<div class="barra-linha"><span class="rotulo-barra">' + rotular(c) + '</span>' +
+        svgBarraHorizontal(valores[c], max, cor) +
+        '<span class="valor-barra">' + valores[c] + '</span></div>';
+    }).join("") || "<p>" + t("semDadosPeriodo") + "</p>";
+  }
+
+  // So reaplica a busca (client-side) em cima do ultimo resultado buscado -
+  // nao dispara consulta nova. Usado no "input" do campo de busca.
+  function reaplicarBusca() {
+    var comBusca = aplicarBusca(ultimosFiltrados.movimentos);
+    renderizarTabela(comBusca, ultimosFiltrados.movimentos.length, ultimosFiltrados.truncado);
+    renderizarInsights(comBusca, ultimosFiltrados.pendentesCount, ultimosFiltrados.comparacaoInsights);
+    document.getElementById("aviso-truncado").classList.toggle("escondido", !ultimosFiltrados.truncado);
+  }
+
+  // Periodo imediatamente anterior, de mesmo tamanho em dias, ao [dataInicio,
+  // dataFim] informado - usado pra comparacao de tendencia nos stat tiles
+  // (ver `deltaTexto`). Ex.: filtro 01/09-10/09 (10 dias) -> anterior e
+  // 22/08-31/08 (tambem 10 dias, terminando um dia antes do inicio atual).
+  function periodoAnterior(dataInicioStr, dataFimStr) {
+    var inicio = new Date(dataInicioStr + "T00:00:00");
+    var fim = new Date(dataFimStr + "T00:00:00");
+    var dias = Math.round((fim - inicio) / 86400000) + 1;
+    var novoFim = new Date(inicio);
+    novoFim.setDate(novoFim.getDate() - 1);
+    var novoInicio = new Date(novoFim);
+    novoInicio.setDate(novoInicio.getDate() - (dias - 1));
+    return { dataInicio: dataIso(novoInicio), dataFim: dataIso(novoFim) };
+  }
+
+  async function atualizar() {
+    var elStatus = document.getElementById("status-topo");
+    try {
+      var filtros = lerFiltrosDaTela();
+      atualizarEstadoAtalhos(filtros);
+      // So compara quando o periodo e explicito nos dois extremos - um
+      // filtro em aberto (De ou Ate vazio) nao tem um "periodo anterior de
+      // mesmo tamanho" bem definido.
+      var compararPeriodo = filtros.dataInicio && filtros.dataFim;
+      var filtrosComparacao = compararPeriodo
+        ? Object.assign({}, filtros, periodoAnterior(filtros.dataInicio, filtros.dataFim))
+        : null;
+      var chaveComparacao = compararPeriodo ? filtros.dataInicio + ":" + filtros.dataFim : null;
+      var cacheValido = compararPeriodo &&
+        chaveComparacao === comparacaoCache.chave &&
+        (Date.now() - comparacaoCache.timestampMs) < INTERVALO_MIN_COMPARACAO_MS;
+      var resultados = await Promise.all([
+        buscarMovimentosFiltrados(filtros),
+        buscarPendentesGlobal(),
+        buscarUltimaSincronizacaoPorArmazem(),
+        buscarContagemPorFluxo(filtros),
+        buscarReparosEmAberto(),
+        compararPeriodo && !cacheValido ? buscarMovimentosFiltrados(filtrosComparacao) : Promise.resolve(null)
+      ]);
+      var dadosFiltrados = resultados[0];
+      var pendentes = resultados[1];
+      var ultimaSincPorArmazem = resultados[2];
+      var contagemPorFluxo = resultados[3];
+      var reparosAbertos = resultados[4];
+      var dadosComparacao = resultados[5];
+      var comparacaoInsights;
+      if (!compararPeriodo) {
+        comparacaoInsights = null;
+      } else if (cacheValido) {
+        comparacaoInsights = comparacaoCache.insights;
+      } else {
+        comparacaoInsights = dadosComparacao ? calcularInsights(dadosComparacao.movimentos, 0) : null;
+        comparacaoCache = { chave: chaveComparacao, insights: comparacaoInsights, timestampMs: Date.now() };
+      }
+      renderizarContagemAbas(contagemPorFluxo);
+      renderizarReparosAbertos(reparosAbertos);
+
+      var precisamOriginal = [];
+      var jaPedidos = {};
+      dadosFiltrados.movimentos.forEach(function (m) {
+        if (m.estornado_de == null) return;
+        var chave = m.armazem_codigo + ":" + m.estornado_de;
+        if (jaPedidos[chave]) return;
+        var jaCarregado = dadosFiltrados.movimentos.some(function (o) {
+          return o.armazem_codigo === m.armazem_codigo && o.id_origem === m.estornado_de;
+        });
+        if (!jaCarregado) {
+          jaPedidos[chave] = true;
+          precisamOriginal.push({ armazemCodigo: m.armazem_codigo, idOrigem: m.estornado_de });
+        }
+      });
+      var referenciasEstorno = await buscarReferenciasEstorno(precisamOriginal);
+
+      ultimosFiltrados = {
+        movimentos: dadosFiltrados.movimentos,
+        truncado: dadosFiltrados.truncado,
+        pendentesCount: pendentes.length,
+        referenciasEstorno: referenciasEstorno,
+        comparacaoInsights: comparacaoInsights
+      };
+      renderizarPendentes(pendentes);
+      renderizarStatusArmazens(ultimaSincPorArmazem);
+      reaplicarBusca();
+      var hora = new Date().toLocaleTimeString(idiomaAtual === "zh" ? "zh-CN" : "pt-BR");
+      elStatus.textContent = idiomaAtual === "zh"
+        ? "更新于 " + hora + " - 每5分钟自动刷新。"
+        : "Atualizado as " + hora + " - atualiza sozinho a cada 5 minutos.";
+    } catch (e) {
+      elStatus.textContent = (idiomaAtual === "zh" ? "获取数据失败：" : "Falha ao buscar dados: ") + e.message;
+    }
+  }
+
+  function dataIso(data) {
+    var pad = function (n) { return String(n).padStart(2, "0"); };
+    return data.getFullYear() + "-" + pad(data.getMonth() + 1) + "-" + pad(data.getDate());
+  }
+
+  function subtrairDias(dias) {
+    var data = new Date();
+    data.setDate(data.getDate() - dias);
+    return dataIso(data);
+  }
+
+  // Marca visualmente qual atalho (Hoje/7 dias/30 dias) corresponde ao
+  // periodo atualmente nos campos De/Ate - antes nenhum atalho mostrava
+  // estado "selecionado", entao nao dava pra saber o que estava aplicado
+  // sem olhar os dois campos de data.
+  function atualizarEstadoAtalhos(filtros) {
+    var hoje = dataIso(new Date());
+    document.querySelectorAll(".atalho").forEach(function (botao) {
+      var dias = Number(botao.getAttribute("data-dias"));
+      var ativo = filtros.dataFim === hoje && filtros.dataInicio === subtrairDias(dias);
+      botao.classList.toggle("ativo", ativo);
+    });
+  }
+
+  // Aba de fluxo (Todos/Saida de Armazem/Montagem/SAC/Reparo Externo) - ver
+  // `abaAtual` mais acima. So troca o estado e redispara `atualizar()`, o
+  // filtro de fluxo em si ja e lido de `abaAtual` por `lerFiltrosDaTela`.
+  // Persiste a escolha (mesmo padrao de tema/idioma) - quem sempre acompanha
+  // uma aba especifica (ex.: SAC) nao precisa reclicar nela a cada visita.
+  var CHAVE_ABA = "ecoviva-painel-aba";
+
+  function selecionarAba(fluxo) {
+    abaAtual = fluxo;
+    try { localStorage.setItem(CHAVE_ABA, fluxo); } catch (e) {}
+    document.querySelectorAll(".aba-fluxo").forEach(function (botao) {
+      var ativa = botao.getAttribute("data-fluxo") === fluxo;
+      botao.classList.toggle("ativa", ativa);
+      botao.setAttribute("aria-selected", ativa ? "true" : "false");
+    });
+    elConteudo.setAttribute("data-aba-atual", fluxo || "todos");
+    atualizar();
+  }
+
+  function iniciar() {
+    document.getElementById("status-topo").textContent = t("statusCarregando");
+    document.getElementById("botao-atualizar").addEventListener("click", atualizar);
+    document.getElementById("botao-exportar-csv").addEventListener("click", exportarCsv);
+
+    // Delegado (um listener so, no <tbody>) porque `renderizarTabela`
+    // reconstroi o corpo inteiro a cada atualizacao/busca - listeners por
+    // `<tr>` teriam que ser re-anexados toda vez.
+    document.getElementById("corpo-tabela").addEventListener("click", function (e) {
+      var linha = e.target.closest("tr[data-armazem]");
+      if (!linha) return;
+      var armazemCodigo = linha.getAttribute("data-armazem");
+      var idOrigem = Number(linha.getAttribute("data-id-origem"));
+      var m = ultimaListaRenderizada.find(function (item) {
+        return item.armazem_codigo === armazemCodigo && item.id_origem === idOrigem;
+      });
+      if (m) abrirDetalhe(m);
+    });
+    document.getElementById("modal-fechar").addEventListener("click", fecharDetalhe);
+    document.getElementById("modal-detalhe").addEventListener("click", function (e) {
+      if (e.target.id === "modal-detalhe") fecharDetalhe();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") fecharDetalhe();
+    });
+    [
+      "filtro-armazem", "filtro-data-inicio", "filtro-data-fim",
+      "filtro-tipo", "filtro-situacao", "filtro-responsavel"
+    ].forEach(function (id) {
+      document.getElementById(id).addEventListener("change", atualizar);
+    });
+    // Numero do pedido filtra no SQL (round-trip ao Turso), entao usa um
+    // pequeno debounce pra nao disparar uma consulta a cada tecla digitada.
+    var debouncePedido = null;
+    document.getElementById("filtro-pedido").addEventListener("input", function () {
+      clearTimeout(debouncePedido);
+      debouncePedido = setTimeout(atualizar, 400);
+    });
+    document.getElementById("filtro-busca").addEventListener("input", reaplicarBusca);
+
+    document.querySelectorAll(".atalho").forEach(function (botao) {
+      botao.addEventListener("click", function () {
+        var dias = Number(botao.getAttribute("data-dias"));
+        var fim = new Date();
+        var inicio = new Date();
+        inicio.setDate(inicio.getDate() - dias);
+        document.getElementById("filtro-data-inicio").value = dataIso(inicio);
+        document.getElementById("filtro-data-fim").value = dataIso(fim);
+        atualizar();
+      });
+    });
+
+    document.querySelectorAll(".aba-fluxo").forEach(function (botao) {
+      botao.addEventListener("click", function () { selecionarAba(botao.getAttribute("data-fluxo")); });
+    });
+
+    // Restaura a aba salva (se houver) sem disparar uma consulta extra aqui -
+    // so ajusta o estado visual/`abaAtual`, o `atualizar()` unico no fim
+    // desta funcao ja busca com o fluxo certo.
+    var VALORES_ABA_VALIDOS = ["", "saida_armazem", "peca_montagem", "sac", "reparo_externo"];
+    var abaSalva = null;
+    try { abaSalva = localStorage.getItem(CHAVE_ABA); } catch (e) {}
+    if (abaSalva != null && VALORES_ABA_VALIDOS.indexOf(abaSalva) >= 0) {
+      abaAtual = abaSalva;
+      document.querySelectorAll(".aba-fluxo").forEach(function (botao) {
+        var ativa = botao.getAttribute("data-fluxo") === abaSalva;
+        botao.classList.toggle("ativa", ativa);
+        botao.setAttribute("aria-selected", ativa ? "true" : "false");
+      });
+      elConteudo.setAttribute("data-aba-atual", abaSalva || "todos");
+    }
+
+    buscarResponsaveis().then(renderizarOpcoesResponsavel).catch(function () {});
+
+    // "Hoje" como padrao real ao abrir o painel, nao so um atalho pra
+    // clicar - antes os campos De/Ate comecavam vazios e a primeira consulta
+    // carregava o historico inteiro (ate o limite de 2000 linhas) sem
+    // nenhum filtro de periodo.
+    document.getElementById("filtro-data-inicio").value = dataIso(new Date());
+    document.getElementById("filtro-data-fim").value = dataIso(new Date());
+
+    atualizar();
+    if (intervaloAtualizacao) clearInterval(intervaloAtualizacao);
+    // Pula a atualizacao automatica com a aba em segundo plano (deixada
+    // aberta numa tela de escritorio, por exemplo) - sem isso o painel
+    // continuava consultando o Turso a cada ciclo pra nada, ja que ninguem
+    // estava vendo o resultado. Ao voltar pra aba, atualiza na hora em vez
+    // de esperar o proximo ciclo, pra nao mostrar dado velho.
+    // 5 minutos (era 30s, depois 60s) - os indices adicionados em
+    // `db::sync::SQL_CRIAR_INDICES_REMOTOS` ja tiraram o grosso do custo por
+    // consulta (alguns dos NOT EXISTS eram O(n^2) sem indice - foi o que
+    // estourou a cota gratuita de "rows read" do Turso em 2026-09 com uma
+    // tabela de umas poucas centenas de linhas), mas o "sem custo" deste
+    // sistema e regra permanente, entao o intervalo fica bem folgado por
+    // margem de seguranca, nao por necessidade tecnica - o botao "Atualizar
+    // agora" continua disponivel pra quem precisar de dado na hora.
+    intervaloAtualizacao = setInterval(function () {
+      if (!document.hidden) atualizar();
+    }, 5 * 60 * 1000);
+    document.addEventListener("visibilitychange", function () {
+      if (!document.hidden) atualizar();
+    });
+  }
+
+  // PWA: registra o service worker do shell estatico (ver painel/sw.js -
+  // nunca cacheia dado do Turso, so HTML/manifest/icones). `.catch` vazio de
+  // proposito - falha aqui (ex.: aberto via file:// num teste local, onde o
+  // navegador bloqueia service worker) nunca deve impedir o painel de
+  // carregar.
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("sw.js").catch(function () {});
+    });
+  }
+})();
+</script>
+</body>
+</html>

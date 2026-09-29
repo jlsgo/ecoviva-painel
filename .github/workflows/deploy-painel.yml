@@ -1,0 +1,75 @@
+name: Deploy do painel
+
+# Publica painel/index.html (mais manifest.json/sw.js/icons/, do PWA) no
+# GitHub Pages. So roda quando o painel muda (ou via "Run workflow" manual) -
+# as credenciais reais (URL + token somente-leitura do Turso) ficam em
+# secrets do repo, nunca no arquivo fonte commitado; entram no artefato
+# publicado ja cifradas com a senha do painel (secret PAINEL_SENHA).
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'painel/**'
+      - 'scripts/cifrar-credenciais-painel.mjs'
+      - '.github/workflows/deploy-painel.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Publica o painel
+    # Este arquivo vive no repo privado do app (onde o painel e desenvolvido)
+    # e e copiado por scripts/publicar-painel.sh pro repo publico que de fato
+    # publica no Pages - so roda la (docs/PAINEL_PUBLICACAO.md).
+    if: github.repository == 'jlsgo/ecoviva-painel'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instala Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # As credenciais do Turso entram CIFRADAS com a senha do painel (nunca
+      # em texto puro na pagina publica - docs/AUDITORIA.md, SEG-02). Se algum
+      # secret estiver faltando ou a senha for curta, o script falha e o job
+      # para aqui: a versao anterior do painel continua no ar.
+      - name: Cifra e injeta as credenciais do Turso (somente-leitura)
+        run: |
+          mkdir -p _site
+          node scripts/cifrar-credenciais-painel.mjs painel/index.html _site/index.html
+        env:
+          TURSO_PAINEL_URL: ${{ secrets.TURSO_PAINEL_URL }}
+          TURSO_PAINEL_TOKEN: ${{ secrets.TURSO_PAINEL_TOKEN }}
+          PAINEL_SENHA: ${{ secrets.PAINEL_SENHA }}
+
+      - name: Copia manifest, service worker e icones (PWA)
+        run: |
+          cp painel/manifest.json _site/manifest.json
+          cp painel/sw.js _site/sw.js
+          cp -r painel/icons _site/icons
+
+      - name: Configura o Pages
+        uses: actions/configure-pages@v5
+
+      - name: Envia o artefato do Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publica no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
