@@ -29,6 +29,10 @@
     --aviso-claro: #fffbeb;
     --divergencia: #b7791f;
     --divergencia-claro: #fef0e7;
+    /* Transferencia A4<->B2 (movimento interno, issue #45): cor propria pra
+       nunca ser confundida com entrada (verde) ou saida (azul). */
+    --interno: #6d28d9;
+    --interno-recebido: #0e7490;
     /* Paleta categorica pros graficos de barra que comparam entidades
        (armazem/categoria/fluxo) - distinta da paleta semantica acima
        (verde/erro/aviso ja tem significado proprio de status). Mesmos tons
@@ -65,6 +69,8 @@
       --erro-claro: #3a1a1c;
       --aviso-claro: #3a2c0f;
       --divergencia-claro: #3a2814;
+      --interno: #a78bfa;
+      --interno-recebido: #22d3ee;
       --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
       --sombra-md: 0 6px 24px rgba(0, 0, 0, 0.4);
     }
@@ -80,6 +86,8 @@
     --erro-claro: #3a1a1c;
     --aviso-claro: #3a2c0f;
     --divergencia-claro: #3a2814;
+    --interno: #a78bfa;
+    --interno-recebido: #22d3ee;
     --sombra-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --sombra-md: 0 6px 24px rgba(0, 0, 0, 0.4);
   }
@@ -269,10 +277,8 @@
   }
   .aba-fluxo:hover { border-color: var(--verde); }
   .aba-fluxo.ativa { background: var(--verde); color: white; border-color: var(--verde); }
-  /* Cor de cada aba ao ficar ativa reaproveita a mesma paleta ja usada no
-     grafico "Por fluxo" (CORES_FLUXO no script abaixo) - quem ja associa
-     azul=Saida/dourado=Montagem/ciano=SAC/verde-oliva=Reparo nos graficos
-     reconhece a mesma cor na aba. */
+  /* Cor fixa por fluxo quando a aba esta ativa: azul=Saida, dourado=
+     Montagem, ciano=SAC, verde-oliva=Reparo. */
   .aba-fluxo-saida_armazem.ativa { background: var(--grafico-1); border-color: var(--grafico-1); }
   .aba-fluxo-peca_montagem.ativa { background: var(--grafico-4); border-color: var(--grafico-4); }
   .aba-fluxo-sac.ativa { background: var(--grafico-6); border-color: var(--grafico-6); }
@@ -317,15 +323,19 @@
      valor completo) em vez de esticar a tabela. */
   table { width: 100%; border-collapse: collapse; font-size: 0.85rem; table-layout: fixed; }
   th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid var(--borda); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .col-armazem { width: 8%; }
+  /* Razao Social e Itens sao as colunas de texto longo - antes tinham 8%
+     cada (menos que Data/Hora) e viravam uma coluna estreita de 6-8 linhas
+     por lancamento. Data/Hora quebra em 2 linhas (data / hora) pra sobrar
+     espaco pra elas. */
+  .col-armazem { width: 6%; }
   .col-fluxo { width: 8%; white-space: normal; }
-  .col-datahora { width: 12%; }
-  .col-qtd { width: 6%; font-variant-numeric: tabular-nums; }
-  .col-registrado { width: 11%; }
-  .col-situacao { width: 9%; }
-  .col-sincronizado { width: 11%; }
-  .col-coleta { width: 9%; white-space: normal; }
-  .col-razaosocial { width: 8%; white-space: normal; }
+  .col-datahora { width: 8%; white-space: normal; font-variant-numeric: tabular-nums; }
+  .col-qtd { width: 5%; font-variant-numeric: tabular-nums; }
+  .col-registrado { width: 7%; }
+  .col-situacao { width: 11%; }
+  .col-sincronizado { width: 7%; }
+  .col-coleta { width: 11%; white-space: normal; }
+  .col-razaosocial { width: 13%; white-space: normal; overflow-wrap: break-word; }
   /* Colunas so fazem sentido dentro de fluxos especificos - a coluna Fluxo
      fica redundante depois que a aba ja filtrou pra um so (so continua
      visivel em "Todos"), e Razao Social so e coletada em saida_armazem/sac
@@ -339,7 +349,7 @@
      Externo - cada card so aparece onde faz sentido. */
   #conteudo[data-aba-atual="reparo_externo"] #cartao-pendentes { display: none; }
   #conteudo:not([data-aba-atual="todos"]):not([data-aba-atual="reparo_externo"]) #cartao-reparos-abertos { display: none; }
-  th { position: sticky; top: 0; background: var(--cartao); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
+  th { position: sticky; top: 0; background: var(--cartao); white-space: normal; vertical-align: bottom; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
   tbody tr:hover { background: var(--bg); }
   tbody tr.linha-clicavel { cursor: pointer; }
 
@@ -393,9 +403,9 @@
   .badge-divergencia { background: var(--divergencia-claro); color: var(--divergencia); }
   .badge-estorno { background: var(--erro-claro); color: var(--erro); }
   .badge-recusado { background: var(--aviso-claro); color: var(--aviso); }
-  .col-pedido { width: 10%; }
+  .col-pedido { width: 7%; }
   td.col-pedido { font-weight: 700; color: var(--verde-escuro); }
-  .col-itens { width: 8%; white-space: normal; }
+  .col-itens { width: 17%; white-space: normal; overflow-wrap: break-word; }
   .obs-detalhe { color: var(--texto-suave); font-style: italic; }
   .aviso-truncado {
     display: flex;
@@ -439,16 +449,6 @@
      usa (`--erro-claro`/`--erro` do resto da pagina). */
   .status-armazem.frio { background: var(--erro-claro); border-color: var(--erro); }
   .status-armazem strong { margin-right: 4px; }
-  .grade-stats { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
-  .stat-tile { background: var(--bg); border: 1px solid var(--borda); border-radius: 8px; padding: 12px 16px; min-width: 140px; flex: 1; }
-  /* tabular-nums: o painel se atualiza sozinho a cada 5 minutos (o
-     `setInterval` perto do fim do arquivo) - sem isso, o numero mudar de
-     "76" pra "108" desloca o layout horizontalmente a cada refresh (digito
-     1 e mais estreito que os outros nas fontes proporcionais usadas aqui). */
-  .stat-tile .valor { font-size: 1.5rem; font-weight: 700; color: var(--verde); font-variant-numeric: tabular-nums; }
-  .stat-tile .valor.aviso { color: var(--aviso); }
-  .stat-tile .valor.erro { color: var(--erro); }
-  .stat-tile .rotulo { font-size: 0.75rem; color: var(--texto-suave); margin-top: 2px; }
   /* Comparacao com o periodo anterior (ver `deltaTexto`) - fonte pequena e
      cor neutra de proposito, herdaria o 1.5rem verde/vermelho de `.valor`
      sem essas duas regras. Nao e semaforo (mais/menos movimento nao e bom
@@ -462,6 +462,75 @@
   .barra-linha .valor-barra { width: 34px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
   .lista-pendentes p { padding: 8px 0; border-bottom: 1px solid var(--borda); margin: 0; }
   .lista-pendentes p:last-child { border-bottom: none; }
+
+  /* Resumo do periodo (issue #45): 4 numeros principais, uma faixa discreta
+     com o resto, e o balanco por armazem. */
+  .faixa-sync { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 0 0 14px; font-size: 0.8rem; color: var(--texto-suave); }
+  .faixa-sync-rotulo { font-weight: 600; }
+  .faixa-sync .status-armazens { gap: 8px; }
+  .faixa-sync .status-armazem { flex: 0 0 auto; min-width: 0; padding: 4px 12px; border-radius: 999px; font-size: 0.78rem; background: var(--cartao); }
+  .periodo-resumo {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--texto-suave);
+    background: var(--bg);
+    border: 1px solid var(--borda);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .grade-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+  .kpi {
+    --kpi-cor: var(--verde);
+    background: var(--bg);
+    border: 1px solid var(--borda);
+    border-left: 4px solid var(--kpi-cor);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .kpi-saida { --kpi-cor: var(--azul); }
+  .kpi-pedidos { --kpi-cor: var(--grafico-6); }
+  .kpi-entrada { --kpi-cor: var(--verde); }
+  /* Tracejado = "nao e movimento da empresa", mesmo codigo visual das
+     colunas internas do balanco. */
+  .kpi-interno { --kpi-cor: var(--interno); border-style: dashed; border-left-style: solid; }
+  .kpi-rotulo { font-size: 0.74rem; font-weight: 700; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.03em; }
+  .kpi-valor { font-size: 2rem; font-weight: 800; line-height: 1.1; color: var(--kpi-cor); font-variant-numeric: tabular-nums; }
+  .kpi-unidade { font-size: 0.8rem; font-weight: 600; color: var(--texto-suave); }
+  .kpi-sub { font-size: 0.8rem; }
+  .kpi-sub strong, .faixa-secundaria strong { font-variant-numeric: tabular-nums; }
+  .kpi-nota { font-size: 0.72rem; color: var(--texto-suave); margin-top: auto; padding-top: 4px; }
+  .texto-aviso { color: var(--aviso); }
+  .texto-erro { color: var(--erro); }
+  .faixa-secundaria { display: flex; flex-wrap: wrap; gap: 6px 20px; font-size: 0.8rem; color: var(--texto-suave); padding: 12px 2px 0; }
+  .faixa-secundaria strong { color: var(--texto); }
+  .faixa-secundaria .texto-aviso strong, .faixa-secundaria .texto-erro strong { color: inherit; }
+  .balanco-scroll { overflow-x: auto; }
+  .tabela-balanco { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; table-layout: auto; }
+  .tabela-balanco th, .tabela-balanco td { white-space: normal; padding: 8px 12px; border-bottom: 1px solid var(--borda); text-align: right; }
+  .tabela-balanco tr:first-child th { font-size: 0.72rem; font-weight: 700; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.02em; vertical-align: bottom; }
+  .tabela-balanco th[scope="row"] { text-align: left; font-weight: 700; }
+  .tabela-balanco .col-interna { color: var(--interno); background: color-mix(in srgb, var(--interno) 7%, transparent); }
+  .tabela-balanco td.zero { color: var(--texto-suave); }
+  .tabela-balanco .linha-empresa th, .tabela-balanco .linha-empresa td { font-weight: 800; border-top: 2px solid var(--borda); border-bottom: none; }
+  .tabela-balanco .linha-empresa td.col-interna { font-weight: 500; font-style: italic; font-size: 0.75rem; cursor: help; }
+  .graficos-lado { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
+  .legenda { display: flex; gap: 14px; font-size: 0.75rem; color: var(--texto-suave); margin: -4px 0 10px; }
+  .legenda-item { display: inline-flex; align-items: center; gap: 5px; }
+  .legenda-cor { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .dia-linha { display: flex; align-items: center; gap: 10px; font-size: 0.8rem; margin-bottom: 8px; }
+  .dia-linha .rotulo-barra { width: 84px; flex-shrink: 0; text-align: right; color: var(--texto-suave); font-variant-numeric: tabular-nums; }
+  .dia-barras { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .barra-par { display: flex; align-items: center; gap: 6px; height: 11px; }
+  .barra-cor { display: inline-block; height: 8px; border-radius: 2px; min-width: 2px; }
+  .barra-par .valor-barra { font-size: 0.72rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .barra-saida { background: var(--azul); }
+  .barra-entrada { background: var(--verde); }
+  .badge-transf { background: color-mix(in srgb, var(--interno) 15%, transparent); color: var(--interno); }
+  .badge-transf-recebida { background: color-mix(in srgb, var(--interno-recebido) 15%, transparent); color: var(--interno-recebido); }
 
   /* P3 do levantamento do painel (ver docs/ROADMAP.md, "P3 ganhou um item
      concreto: visualizacao no celular") - ate aqui a pagina nao tinha
@@ -536,6 +605,8 @@
        sobra mais espaco pra barra em si numa tela de ~360-400px de largura
        util (depois do padding do .cartao acima). */
     .barra-linha .rotulo-barra { width: 78px; font-size: 0.74rem; }
+    .kpi-valor { font-size: 1.6rem; }
+    .tabela-balanco th, .tabela-balanco td { padding: 6px 8px; }
   }
 </style>
 </head>
@@ -647,8 +718,10 @@
         <label><span data-i18n="filtroSituacaoLabel">Situacao</span>
           <select id="filtro-situacao">
             <option value="" data-i18n="opcaoTodas">Todas</option>
-            <option value="entrada" data-i18n="tipoEntrada">Entrada</option>
-            <option value="baixa" data-i18n="situacaoBaixa">Baixa</option>
+            <option value="entrada" data-i18n="situacaoEntrada">Entrada (de fora)</option>
+            <option value="baixa" data-i18n="situacaoBaixa">Baixa (saida para fora)</option>
+            <option value="transf_enviada" data-i18n="situacaoTransfEnviada">Transferencia enviada</option>
+            <option value="transf_recebida" data-i18n="situacaoTransfRecebida">Transferencia recebida</option>
             <option value="estorno" data-i18n="situacaoEstorno">Estorno</option>
             <option value="recusado" data-i18n="situacaoRecusado">Recusado</option>
           </select>
@@ -659,36 +732,42 @@
       </div>
     </div>
 
-    <div class="cartao">
-      <h3 data-i18n="cartaoSyncTitulo">Sincronizacao por armazem</h3>
-      <p class="subtitulo-cartao" data-i18n="cartaoSyncSubtitulo">Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado.</p>
+    <div class="faixa-sync" title="Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado." data-i18n-title="cartaoSyncSubtitulo">
+      <span class="faixa-sync-rotulo" data-i18n="faixaSyncRotulo">Ultima sincronizacao</span>
       <div id="status-armazens" class="status-armazens"></div>
     </div>
 
-    <div class="cartao" id="cartao-insights">
-      <h3 data-i18n="cartaoInsightsTitulo">Resumo do periodo filtrado</h3>
+    <section class="cartao" id="cartao-insights">
+      <div class="cartao-cabecalho">
+        <h3 data-i18n="cartaoInsightsTitulo">Resumo do periodo</h3>
+        <span id="periodo-resumo" class="periodo-resumo"></span>
+      </div>
+      <p class="subtitulo-cartao" data-i18n="cartaoInsightsSubtitulo">Em unidades, ja descontando estornos. Transferencia entre A4 e B2 e movimento interno: aparece so no bloco dela, nunca como entrada ou saida da empresa.</p>
       <p id="aviso-truncado" class="aviso-truncado escondido">
         <svg class="icone-inline" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>
         <span data-i18n="avisoTruncadoTexto">Este filtro tem mais movimentos do que o carregado - os numeros abaixo estao incompletos. Reduza o periodo ou refine o filtro pra ver o total real.</span>
       </p>
-      <div id="grade-stats" class="grade-stats"></div>
+      <div id="grade-kpis" class="grade-kpis"></div>
+      <div id="faixa-secundaria" class="faixa-secundaria"></div>
       <div class="grafico-bloco">
-        <h4 data-i18n="graficoVolumeTitulo">Volume por dia</h4>
-        <div id="grafico-volume"></div>
+        <h4 data-i18n="balancoTitulo">Balanco por armazem (unidades)</h4>
+        <div id="tabela-balanco"></div>
       </div>
-      <div class="grafico-bloco">
-        <h4 data-i18n="graficoCategoriasTitulo">Top categorias de item</h4>
-        <div id="grafico-categorias"></div>
+      <div class="graficos-lado">
+        <div class="grafico-bloco escondido" id="bloco-por-dia">
+          <h4 data-i18n="graficoDiasTitulo">Por dia</h4>
+          <div class="legenda">
+            <span class="legenda-item"><span class="legenda-cor barra-saida"></span><span data-i18n="legendaSaida">Saiu para fora</span></span>
+            <span class="legenda-item"><span class="legenda-cor barra-entrada"></span><span data-i18n="legendaEntrada">Entrou de fora</span></span>
+          </div>
+          <div id="grafico-dias"></div>
+        </div>
+        <div class="grafico-bloco" id="bloco-categorias">
+          <h4 data-i18n="graficoCategoriasTitulo">O que saiu para fora, por categoria</h4>
+          <div id="grafico-categorias"></div>
+        </div>
       </div>
-      <div class="grafico-bloco escondido" id="bloco-por-armazem">
-        <h4 data-i18n="graficoArmazemTitulo">Por armazem</h4>
-        <div id="grafico-armazem"></div>
-      </div>
-      <div class="grafico-bloco escondido" id="bloco-por-fluxo">
-        <h4 data-i18n="graficoFluxoTitulo">Por fluxo</h4>
-        <div id="grafico-fluxo"></div>
-      </div>
-    </div>
+    </section>
 
     <div class="cartao" id="cartao-pendentes">
       <h3 data-i18n="cartaoPendentesTitulo">Transferencias pendentes de confirmacao</h3>
@@ -863,21 +942,14 @@
       tipoEntrada: "Entrada",
       tipoSaida: "Saida",
       filtroSituacaoLabel: "Situacao",
-      situacaoBaixa: "Baixa",
       situacaoEstorno: "Estorno",
       situacaoRecusado: "Recusado",
       filtroBuscaLabel: "Busca",
       filtroBuscaPlaceholder: "Nome ou item",
       botaoAtualizar: "Atualizar agora",
       botaoExportarCsv: "Exportar CSV",
-      cartaoSyncTitulo: "Sincronizacao por armazem",
       cartaoSyncSubtitulo: "Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado.",
-      cartaoInsightsTitulo: "Resumo do periodo filtrado",
       avisoTruncadoTexto: "Este filtro tem mais movimentos do que o carregado - os numeros abaixo estao incompletos. Reduza o periodo ou refine o filtro pra ver o total real.",
-      graficoVolumeTitulo: "Volume por dia",
-      graficoCategoriasTitulo: "Top categorias de item",
-      graficoArmazemTitulo: "Por armazem",
-      graficoFluxoTitulo: "Por fluxo",
       cartaoPendentesTitulo: "Transferencias pendentes de confirmacao",
       cartaoReparosAbertosTitulo: "Reparos externos em aberto",
       cartaoReparosAbertosSubtitulo: "Pecas que sairam pro tecnico externo e ainda nao voltaram.",
@@ -907,21 +979,60 @@
       nuncaSincronizou: "nunca sincronizou",
       tempoAgoraMesmo: "agora mesmo",
       badgePendente: "pendente",
-      statTileMovimentos: "Movimentos",
-      statTileUnidades: "Unidades",
-      statTilePendentes: "Transferencias pendentes",
-      statTileRecusados: "Recebimentos recusados",
-      statTileTaxaEstorno: "Taxa de estorno",
-      statTileValorVendas: "Valor total (vendas SAC)",
-      statTileValorGarantia: "Valor total (garantias SAC)",
-      statTileMontado: "Saiu montado",
-      statTileCaixa: "Saiu em caixa",
       semDadosPeriodo: "Sem dados no periodo.",
       situacaoEstornoBadge: "ESTORNO",
       situacaoBaixaBadge: "BAIXA",
       situacaoEntradaBadge: "ENTRADA",
       situacaoRecusadoBadge: "RECUSADO",
       divergenciaBadge: "divergencia",
+      cartaoInsightsTitulo: "Resumo do periodo",
+      cartaoInsightsSubtitulo: "Em unidades, ja descontando estornos. Transferencia entre A4 e B2 e movimento interno: aparece so no bloco dela, nunca como entrada ou saida da empresa.",
+      faixaSyncRotulo: "Ultima sincronizacao",
+      periodoTudo: "todo o periodo",
+      kpiSaidaTodos: "Saiu para fora (todos os fluxos)",
+      kpiSaidaArmazem: "Expedido p/ cliente ou transportadora",
+      kpiSaidaMontagem: "Pecas que sairam para fora",
+      kpiSaidaSac: "Saiu do SAC",
+      kpiSaidaReparo: "Enviado ao tecnico",
+      kpiSaidaNota: "Nao conta envio entre A4 e B2.",
+      kpiPedidos: "Pedidos expedidos",
+      kpiPedidosNota: "Numeros de pedido distintos que sairam em Saida de Armazem.",
+      kpiEntrada: "Entrou de fora",
+      kpiEntradaReparo: "Voltou do tecnico",
+      kpiEntradaNota: "Nao conta recebimento de transferencia.",
+      kpiTransferencias: "Transferencias A4 ⇄ B2",
+      kpiTransferenciasUnidade: "un. enviadas",
+      kpiTransferenciasRecebidas: "recebidas",
+      kpiTransferenciasTransito: "envios aguardando confirmacao",
+      kpiTransferenciasNota: "Movimento interno - nao soma nas entradas nem nas saidas.",
+      unidadeSingular: "unidade",
+      unidadePlural: "unidades",
+      deltaTitulo: "Periodo anterior de mesmo tamanho:",
+      secLancamentos: "Lancamentos",
+      secEstornos: "Estornos",
+      secRecusas: "Recebimentos recusados",
+      secVendasSac: "Vendas SAC",
+      secGarantiasSac: "Garantias SAC",
+      balancoTitulo: "Balanco por armazem (unidades)",
+      balancoEntrada: "Entrou de fora",
+      balancoRecebido: "Recebido do outro armazem",
+      balancoEnviado: "Enviado ao outro armazem",
+      balancoSaida: "Saiu para fora",
+      balancoEmpresa: "Empresa",
+      balancoInterno: "interno",
+      balancoInternoTitulo: "Transferencia entre A4 e B2 nao entra no total da empresa - o que sai de um entra no outro.",
+      graficoDiasTitulo: "Por dia",
+      legendaSaida: "Saiu para fora",
+      legendaEntrada: "Entrou de fora",
+      graficoCategoriasTitulo: "O que saiu para fora, por categoria",
+      situacaoBaixa: "Baixa (saida para fora)",
+      situacaoEntrada: "Entrada (de fora)",
+      situacaoTransfEnviada: "Transferencia enviada",
+      situacaoTransfRecebida: "Transferencia recebida",
+      situacaoTransfEnviadaBadge: "TRANSF.",
+      situacaoTransfEnviadaTitulo: "Envio pro outro armazem - movimento interno, nao e saida da empresa",
+      situacaoTransfRecebidaBadge: "RECEB.",
+      situacaoTransfRecebidaTitulo: "Recebimento de transferencia do outro armazem - movimento interno, nao e entrada na empresa",
       modalTituloDetalhe: "Detalhes do movimento",
       modalCampoObservacoes: "Observacoes",
       modalRelacionadoOriginal: "Lancamento original (antes do estorno)",
@@ -959,21 +1070,14 @@
       tipoEntrada: "入库",
       tipoSaida: "出库",
       filtroSituacaoLabel: "状态",
-      situacaoBaixa: "出库",
       situacaoEstorno: "冲销",
       situacaoRecusado: "拒收",
       filtroBuscaLabel: "搜索",
       filtroBuscaPlaceholder: "姓名或物品",
       botaoAtualizar: "立即刷新",
       botaoExportarCsv: "导出CSV",
-      cartaoSyncTitulo: "各仓库同步状态",
       cartaoSyncSubtitulo: "每个仓库最后一次发送数据的时间 - 如果某个仓库长时间未同步，这里显示的数据可能已过时。",
-      cartaoInsightsTitulo: "所选时段汇总",
       avisoTruncadoTexto: "此筛选条件下的记录数超过已加载的数量 - 以下数字不完整。请缩小时间范围或调整筛选条件以查看真实总数。",
-      graficoVolumeTitulo: "每日数量",
-      graficoCategoriasTitulo: "物品类别排行",
-      graficoArmazemTitulo: "按仓库",
-      graficoFluxoTitulo: "按流程",
       cartaoPendentesTitulo: "待确认的转运",
       cartaoReparosAbertosTitulo: "在外维修中的物品",
       cartaoReparosAbertosSubtitulo: "已送往外部技术人员、尚未返回的物品。",
@@ -1003,21 +1107,60 @@
       nuncaSincronizou: "从未同步",
       tempoAgoraMesmo: "刚刚",
       badgePendente: "待处理",
-      statTileMovimentos: "记录数",
-      statTileUnidades: "件数",
-      statTilePendentes: "待确认转运",
-      statTileRecusados: "被拒收次数",
-      statTileTaxaEstorno: "冲销率",
-      statTileValorVendas: "销售总额（SAC）",
-      statTileValorGarantia: "保修总额（SAC）",
-      statTileMontado: "已组装出库",
-      statTileCaixa: "装箱出库",
       semDadosPeriodo: "该时段无数据。",
       situacaoEstornoBadge: "冲销",
       situacaoBaixaBadge: "出库",
       situacaoEntradaBadge: "入库",
       situacaoRecusadoBadge: "拒收",
       divergenciaBadge: "差异",
+      cartaoInsightsTitulo: "期间汇总",
+      cartaoInsightsSubtitulo: "单位：件，已扣除冲销。A4 与 B2 之间的调拨属于内部移动，只显示在调拨栏，不计为公司的入库或出库。",
+      faixaSyncRotulo: "最近同步",
+      periodoTudo: "全部时间",
+      kpiSaidaTodos: "对外出库（全部流程）",
+      kpiSaidaArmazem: "发给客户或物流",
+      kpiSaidaMontagem: "对外发出的零件",
+      kpiSaidaSac: "客服出库",
+      kpiSaidaReparo: "送外部维修",
+      kpiSaidaNota: "不含 A4 与 B2 之间的调拨。",
+      kpiPedidos: "已发货订单",
+      kpiPedidosNota: "仓库出库中不同订单号的数量。",
+      kpiEntrada: "外部入库",
+      kpiEntradaReparo: "维修返回",
+      kpiEntradaNota: "不含调拨收货。",
+      kpiTransferencias: "A4 ⇄ B2 调拨",
+      kpiTransferenciasUnidade: "件已发出",
+      kpiTransferenciasRecebidas: "已收到",
+      kpiTransferenciasTransito: "待确认",
+      kpiTransferenciasNota: "内部移动 - 不计入入库或出库。",
+      unidadeSingular: "件",
+      unidadePlural: "件",
+      deltaTitulo: "上一个同长度周期：",
+      secLancamentos: "记录",
+      secEstornos: "冲销",
+      secRecusas: "拒收",
+      secVendasSac: "客服销售额",
+      secGarantiasSac: "客服保修金额",
+      balancoTitulo: "各仓库汇总（件）",
+      balancoEntrada: "外部入库",
+      balancoRecebido: "从另一仓库收到",
+      balancoEnviado: "发往另一仓库",
+      balancoSaida: "对外出库",
+      balancoEmpresa: "公司合计",
+      balancoInterno: "内部",
+      balancoInternoTitulo: "A4 与 B2 之间的调拨不计入公司合计 - 一个仓库发出，另一个仓库收到。",
+      graficoDiasTitulo: "按日",
+      legendaSaida: "对外出库",
+      legendaEntrada: "外部入库",
+      graficoCategoriasTitulo: "对外出库（按类别）",
+      situacaoBaixa: "出库（对外）",
+      situacaoEntrada: "入库（外部）",
+      situacaoTransfEnviada: "调拨发出",
+      situacaoTransfRecebida: "调拨收到",
+      situacaoTransfEnviadaBadge: "调出",
+      situacaoTransfEnviadaTitulo: "发往另一仓库 - 内部调拨，不算公司出库",
+      situacaoTransfRecebidaBadge: "调入",
+      situacaoTransfRecebidaTitulo: "从另一仓库调入 - 内部调拨，不算公司入库",
       modalTituloDetalhe: "记录详情",
       modalCampoObservacoes: "备注",
       modalRelacionadoOriginal: "原始记录（冲销前）",
@@ -1371,16 +1514,22 @@
     if (filtros.situacao === "estorno") {
       condicoes.push("estornado_de IS NOT NULL");
     } else if (filtros.situacao === "baixa") {
-      condicoes.push("tipo = 'saida' AND estornado_de IS NULL");
+      // So saida pra fora - o envio pro outro armazem tem opcao propria.
+      condicoes.push("tipo = 'saida' AND estornado_de IS NULL AND armazem_destino_codigo IS NULL");
+    } else if (filtros.situacao === "transf_enviada") {
+      condicoes.push("tipo = 'saida' AND estornado_de IS NULL AND armazem_destino_codigo IS NOT NULL");
+    } else if (filtros.situacao === "transf_recebida") {
+      condicoes.push(
+        "tipo = 'entrada' AND estornado_de IS NULL AND recebido_de_armazem_codigo IS NOT NULL " +
+        "AND NOT (motivo = 'recusado')"
+      );
     } else if (filtros.situacao === "recusado") {
       condicoes.push("motivo = 'recusado' AND recebido_de_armazem_codigo IS NOT NULL AND estornado_de IS NULL");
     } else if (filtros.situacao === "entrada") {
       // Exclui recusa de recebimento (tambem tipo='entrada') - ela tem sua
       // propria opcao de filtro/badge, nao deve aparecer como "Entrada" generica.
-      condicoes.push(
-        "tipo = 'entrada' AND estornado_de IS NULL " +
-        "AND NOT (motivo = 'recusado' AND recebido_de_armazem_codigo IS NOT NULL)"
-      );
+      // So entrada de fora: recebimento de transferencia e recusa tem opcao propria.
+      condicoes.push("tipo = 'entrada' AND estornado_de IS NULL AND recebido_de_armazem_codigo IS NULL");
     }
     if (filtros.responsavel) { condicoes.push("usuario_nome = ?"); args.push(filtros.responsavel); }
     return { where: condicoes.length ? " WHERE " + condicoes.join(" AND ") : "", args: args };
@@ -1401,17 +1550,26 @@
       condicoes.push("(armazem_codigo = ? AND id_origem = ?)");
       args.push(f.armazemCodigo, f.idOrigem);
     });
-    var sql = "SELECT armazem_codigo, id_origem, numero_pedido, data, hora FROM movimentos_consolidados WHERE " +
+    // tipo/destino/recebido_de/motivo: o estorno nao copia o destino nem o
+    // `recebido_de_*` do original (`domain::movimentos::estornar_movimento`),
+    // entao so olhando o original da pra saber se ele desconta uma saida pra
+    // fora ou uma transferencia (ver `classificarMovimento`).
+    var sql = "SELECT armazem_codigo, id_origem, numero_pedido, data, hora, tipo, " +
+      "armazem_destino_codigo, recebido_de_armazem_codigo, motivo, valor_centavos FROM movimentos_consolidados WHERE " +
       condicoes.join(" OR ");
     var linhas = await executarSql(sql, args);
     var mapa = {};
     linhas.forEach(function (linha) {
-      var armazem = linha[0] && linha[0].value;
-      var id = linha[1] && linha[1].value;
-      mapa[armazem + ":" + id] = {
-        numero_pedido: linha[2] && linha[2].value,
-        data: linha[3] && linha[3].value,
-        hora: linha[4] && linha[4].value
+      function v(i) { return linha[i] && linha[i].value !== undefined ? linha[i].value : null; }
+      mapa[v(0) + ":" + v(1)] = {
+        numero_pedido: v(2),
+        data: v(3),
+        hora: v(4),
+        tipo: v(5),
+        armazem_destino_codigo: v(6),
+        recebido_de_armazem_codigo: v(7),
+        motivo: v(8),
+        valor_centavos: v(9) != null ? Number(v(9)) : null
       };
     });
     return mapa;
@@ -1745,20 +1903,68 @@
   // porque este arquivo e standalone, sem import: estorno > baixa (saida) >
   // entrada. Substitui o `m.status` cru do banco ("aberto"/"estorno"), que
   // nao e o vocabulario ENTRADA/BAIXA/ESTORNO usado no resto do app.
+  // Onde cada lancamento conta no resumo (issue #45). Transferencia entre A4
+  // e B2 e movimento INTERNO: um patinete que sai do B2 pro A4 e depois do A4
+  // pra transportadora tem 2 lancamentos de saida, mas a empresa so
+  // despachou 1. Antes "Saida" somava os dois, "Entrada" somava o
+  // recebimento da transferencia, e "Unidades" somava entrada com saida.
+  // Agora so `saida_externa`/`entrada_externa` sao o que entrou/saiu da
+  // empresa; `transf_*` ficam num bloco proprio e nunca entram nesses totais.
+  function classeDe(base) {
+    if (ehRecusaDeRecebimento(base)) return "recusa";
+    if (base.tipo === "saida") return base.armazem_destino_codigo ? "transf_enviada" : "saida_externa";
+    return base.recebido_de_armazem_codigo ? "transf_recebida" : "entrada_externa";
+  }
+
+  // Um estorno desconta da classe do ORIGINAL (sinal -1) - o estorno em si
+  // nao carrega destino/recebido_de/motivo/valor (`estornar_movimento` no
+  // app), entao `base` e o original quando ele e encontrado. Sem o original
+  // (nao sincronizado ainda), usa o proprio estorno: mesmo tipo, conta como
+  // saida/entrada externa, o caso mais comum.
+  function classificarMovimento(m, acharOriginal) {
+    if (m.estornado_de == null) return { classe: classeDe(m), sinal: 1, base: m };
+    var original = acharOriginal ? acharOriginal(m) : null;
+    var base = original || m;
+    return { classe: classeDe(base), sinal: -1, base: base };
+  }
+
+  // Procura o original de um estorno primeiro no que ja foi carregado, depois
+  // nas referencias buscadas a parte (`buscarReferenciasEstorno`).
+  function criarBuscaOriginal(movimentos, referencias) {
+    var porChave = {};
+    movimentos.forEach(function (o) { porChave[o.armazem_codigo + ":" + o.id_origem] = o; });
+    return function (m) {
+      var chave = m.armazem_codigo + ":" + m.estornado_de;
+      return porChave[chave] || (referencias && referencias[chave]) || null;
+    };
+  }
+
   function situacaoValor(m) {
     if (m.estornado_de != null) return "estorno";
-    if (ehRecusaDeRecebimento(m)) return "recusado";
+    var classe = classeDe(m);
+    if (classe === "recusa") return "recusado";
+    if (classe === "transf_enviada") return "transf_enviada";
+    if (classe === "transf_recebida") return "transf_recebida";
     return m.tipo === "saida" ? "baixa" : "entrada";
   }
 
-  // Mesmas 4 classes/cores de badge usadas em src/styles/global.css
-  // (.badge-entrada/.badge-baixa/.badge-estorno/.badge-recusado) - o painel
-  // espelha o app, entao usa o mesmo vocabulario visual pra quem olha os dois.
+  // Mesmas classes/cores de badge de src/styles/global.css pras 4 situacoes
+  // que o app tambem tem (o painel espelha o app). As 2 de transferencia sao
+  // so do painel: aqui A4 e B2 aparecem juntos, e sem elas o envio pro outro
+  // armazem parecia uma saida da empresa igual as outras.
   function situacaoBadge(m) {
     var valor = situacaoValor(m);
     if (valor === "estorno") return '<span class="badge badge-estorno">' + t("situacaoEstornoBadge") + '</span>';
     if (valor === "baixa") return '<span class="badge badge-baixa">' + t("situacaoBaixaBadge") + '</span>';
     if (valor === "recusado") return '<span class="badge badge-recusado">' + t("situacaoRecusadoBadge") + '</span>';
+    if (valor === "transf_enviada") {
+      return '<span class="badge badge-transf" title="' + t("situacaoTransfEnviadaTitulo") + '">' +
+        t("situacaoTransfEnviadaBadge") + " &rarr; " + escaparHtml(m.armazem_destino_codigo) + '</span>';
+    }
+    if (valor === "transf_recebida") {
+      return '<span class="badge badge-transf-recebida" title="' + t("situacaoTransfRecebidaTitulo") + '">' +
+        t("situacaoTransfRecebidaBadge") + " &larr; " + escaparHtml(m.recebido_de_armazem_codigo) + '</span>';
+    }
     return '<span class="badge badge-entrada">' + t("situacaoEntradaBadge") + '</span>';
   }
 
@@ -2014,7 +2220,9 @@
     estorno: "situacaoEstornoBadge",
     baixa: "situacaoBaixaBadge",
     recusado: "situacaoRecusadoBadge",
-    entrada: "situacaoEntradaBadge"
+    entrada: "situacaoEntradaBadge",
+    transf_enviada: "situacaoTransfEnviadaBadge",
+    transf_recebida: "situacaoTransfRecebidaBadge"
   };
 
   // Exporta exatamente o que esta na tela (filtro + aba + busca ativos),
@@ -2061,71 +2269,64 @@
     URL.revokeObjectURL(url);
   }
 
-  function calcularInsights(filtrados, pendentesCount) {
-    var porDia = {}, porCategoria = {}, porArmazem = {}, porFluxo = {};
-    var totalEstorno = 0, totalRecusado = 0, totalUnidades = 0, totalEntrada = 0, totalSaida = 0;
-    // So soma venda de estorno/recusa fora (nao e uma venda de verdade
-    // acontecendo) - mesmo criterio das outras somas acima.
-    var totalVendasCentavos = 0;
-    // Valor de garantia (SAC saida - `valor_centavos` passou a ser
-    // obrigatorio pra garantia, nao so venda, ver CLAUDE.md/domain/
-    // movimentos.rs) - sem isto nao dava pra saber quanto saiu do SAC em
-    // garantias no dia, so em vendas. So existe do lado saida (entrada de
-    // garantia, a devolucao do cliente, nunca carrega valor).
-    var totalGarantiaCentavos = 0;
-    // Quantos veiculos saíram montados vs em caixa (item.montagem) - so conta
-    // saida de verdade (nao estorno/recusa, mesmo criterio de totalSaida
-    // acima), pra responder "quantas scooters saíram em caixa hoje?" sem
-    // precisar contar linha por linha na tabela.
-    var totalMontado = 0, totalCaixa = 0;
-    filtrados.forEach(function (m) {
-      var qtd = totalItens(m.itens);
-      totalUnidades += qtd;
-      porDia[m.data] = (porDia[m.data] || 0) + qtd;
-      porArmazem[m.armazem_codigo] = (porArmazem[m.armazem_codigo] || 0) + qtd;
-      porFluxo[m.fluxo] = (porFluxo[m.fluxo] || 0) + qtd;
-      if (m.estornado_de != null) {
-        totalEstorno += 1;
-      } else if (ehRecusaDeRecebimento(m)) {
-        // Nao entra em totalEntrada - conta separado, senao "Entrada" fica
-        // inflado com recusas (que nao sao um recebimento de verdade).
-        totalRecusado += 1;
-      } else if (m.tipo === "saida") {
-        totalSaida += qtd;
-        m.itens.forEach(function (it) {
-          if (it.montagem === "montado") totalMontado += it.quantidade || 0;
-          else if (it.montagem === "caixa") totalCaixa += it.quantidade || 0;
-        });
-        // motivo "venda" tambem existe em saida do SAC (peca vendida como
-        // destino, nao so devolucao de cliente) - sem isto, "Valor total
-        // (vendas SAC)" ficava faltando as vendas do lado de saida.
-        if (m.motivo === "venda" && m.valor_centavos) totalVendasCentavos += m.valor_centavos;
-        if (m.motivo === "garantia" && m.valor_centavos) totalGarantiaCentavos += m.valor_centavos;
-      } else {
-        totalEntrada += qtd;
-        if (m.motivo === "venda" && m.valor_centavos) totalVendasCentavos += m.valor_centavos;
-      }
-      m.itens.forEach(function (it) {
-        porCategoria[it.categoria] = (porCategoria[it.categoria] || 0) + (it.quantidade || 0);
-      });
-    });
-    return {
-      porDia: porDia,
-      porCategoria: porCategoria,
-      porArmazem: porArmazem,
-      porFluxo: porFluxo,
-      totalMovimentos: filtrados.length,
-      totalUnidades: totalUnidades,
-      totalEntrada: totalEntrada,
-      totalSaida: totalSaida,
-      totalRecusado: totalRecusado,
-      totalVendasCentavos: totalVendasCentavos,
-      totalGarantiaCentavos: totalGarantiaCentavos,
-      totalMontado: totalMontado,
-      totalCaixa: totalCaixa,
-      taxaEstorno: filtrados.length ? (totalEstorno / filtrados.length) : 0,
-      pendentesCount: pendentesCount
+  function novoBalanco() {
+    return { entrada_externa: 0, transf_recebida: 0, transf_enviada: 0, saida_externa: 0 };
+  }
+
+  // Tudo em UNIDADES liquidas (estorno desconta, ver `classificarMovimento`),
+  // separado pela classe do lancamento - nunca soma entrada com saida nem
+  // transferencia com saida pra fora (issue #45).
+  function calcularInsights(filtrados, acharOriginal) {
+    var r = {
+      lancamentos: filtrados.length,
+      estornos: 0,
+      recusas: 0,
+      total: novoBalanco(),
+      porArmazem: {},
+      porDia: {},
+      saidaPorFluxo: {},
+      categoriasSaida: {},
+      montado: 0,
+      caixa: 0,
+      pedidosExpedidos: 0,
+      vendasCentavos: 0,
+      garantiaCentavos: 0
     };
+    // Pedido -> unidades liquidas que sairam pra fora. Um pedido com 3 linhas
+    // (ou 3 lancamentos) e 1 pedido; um pedido todo estornado some.
+    var pedidos = {};
+    filtrados.forEach(function (m) {
+      var c = classificarMovimento(m, acharOriginal);
+      if (m.estornado_de != null) r.estornos += 1;
+      if (c.classe === "recusa") { r.recusas += c.sinal; return; }
+      var qtd = c.sinal * totalItens(m.itens);
+      var armazem = r.porArmazem[m.armazem_codigo] || (r.porArmazem[m.armazem_codigo] = novoBalanco());
+      armazem[c.classe] += qtd;
+      r.total[c.classe] += qtd;
+
+      var dia = r.porDia[m.data] || (r.porDia[m.data] = { entrada: 0, saida: 0 });
+      if (c.classe === "entrada_externa") dia.entrada += qtd;
+      if (c.classe === "saida_externa") {
+        dia.saida += qtd;
+        r.saidaPorFluxo[m.fluxo] = (r.saidaPorFluxo[m.fluxo] || 0) + qtd;
+        m.itens.forEach(function (it) {
+          var q = c.sinal * (it.quantidade || 0);
+          r.categoriasSaida[it.categoria] = (r.categoriasSaida[it.categoria] || 0) + q;
+          if (it.montagem === "montado") r.montado += q;
+          else if (it.montagem === "caixa") r.caixa += q;
+        });
+        var pedido = (c.base.numero_pedido || m.numero_pedido || "").trim().toUpperCase();
+        if (pedido && m.fluxo === "saida_armazem") pedidos[pedido] = (pedidos[pedido] || 0) + qtd;
+      }
+      // Valor so em lancamento externo do SAC. motivo "venda" existe dos dois
+      // lados (devolucao de venda e peca vendida); garantia com valor so na
+      // saida. O estorno desconta o valor do original.
+      var valor = c.base.valor_centavos ? c.sinal * c.base.valor_centavos : 0;
+      if (valor && c.base.motivo === "venda") r.vendasCentavos += valor;
+      if (valor && c.base.motivo === "garantia" && c.classe === "saida_externa") r.garantiaCentavos += valor;
+    });
+    Object.keys(pedidos).forEach(function (p) { if (pedidos[p] > 0) r.pedidosExpedidos += 1; });
+    return r;
   }
 
   function formatarMoeda(centavos) {
@@ -2141,13 +2342,6 @@
   // Cores fixas por chave conhecida (nao por posicao/ordem), pra cada
   // armazem/categoria/fluxo sempre aparecer com a mesma cor em qualquer
   // grafico, independente do filtro ativo ou da ordem de classificacao.
-  var CORES_ARMAZEM = { A4: "var(--grafico-1)", B2: "var(--grafico-5)" };
-  var CORES_FLUXO = {
-    saida_armazem: "var(--grafico-1)",
-    peca_montagem: "var(--grafico-4)",
-    sac: "var(--grafico-6)",
-    reparo_externo: "var(--grafico-8)"
-  };
   var CORES_CATEGORIA = {
     scooter: "var(--grafico-2)",
     triciclo: "var(--grafico-3)",
@@ -2164,94 +2358,229 @@
       '</svg>';
   }
 
-  // Cada tile so aparece nas abas listadas em `abas` ("" = Todos) - `null`
-  // significa "em qualquer aba" (metrica universal). Sem isso, filtrar pra
-  // Montagem sempre mostrava "Valor total (vendas SAC): R$ 0,00" (motivo/
-  // valor_centavos so existem em SAC) e filtrar pra SAC sempre mostrava
-  // "Saiu montado"/"Saiu em caixa" zerados (montagem de item so existe em
-  // saida_armazem/peca_montagem, ver CLAUDE.md) - ruido constante que a
-  // separacao em abas existe justamente pra eliminar.
-  // Compara com o valor equivalente do periodo imediatamente anterior, de
-  // mesmo tamanho (ver `periodoAnterior`) - so pras 4 metricas de contagem
-  // pura (Movimentos/Unidades/Entrada/Saida), onde "valor" ja e o numero
-  // crua exibido (nao uma string formatada como Taxa de Estorno/Valor). Sem
-  // cor semantica de proposito - mais ou menos movimento nao e bom nem mau
+  // Comparacao com o periodo imediatamente anterior, de mesmo tamanho (ver
+  // `periodoAnterior`) - so nos 2 numeros principais (saiu/entrou de fora).
+  // Sem cor semantica de proposito: mais ou menos movimento nao e bom nem mau
   // por si so, e so contexto de tendencia.
   function deltaTexto(atual, anterior) {
     if (anterior == null) return "";
-    if (anterior === 0) return atual > 0 ? ' <span class="tile-delta">▲</span>' : "";
+    var titulo = ' title="' + t("deltaTitulo") + " " + anterior + '"';
+    if (anterior === 0) return atual > 0 ? ' <span class="tile-delta"' + titulo + '>▲</span>' : "";
     var pct = Math.round(((atual - anterior) / anterior) * 100);
     if (pct === 0) return "";
-    return ' <span class="tile-delta">' + (pct > 0 ? "▲" : "▼") + " " + Math.abs(pct) + "%</span>";
+    return ' <span class="tile-delta"' + titulo + '>' + (pct > 0 ? "▲" : "▼") + " " + Math.abs(pct) + "%</span>";
   }
 
-  function construirStatTiles(dados) {
-    return [
-      { chave: "statTileMovimentos", valor: dados.totalMovimentos, abas: null, comparar: "totalMovimentos" },
-      { chave: "statTileUnidades", valor: dados.totalUnidades, abas: null, comparar: "totalUnidades" },
-      { chave: "tipoEntrada", valor: dados.totalEntrada, abas: null, comparar: "totalEntrada" },
-      { chave: "tipoSaida", valor: dados.totalSaida, abas: null, comparar: "totalSaida" },
-      { chave: "statTilePendentes", valor: dados.pendentesCount, abas: ["", "saida_armazem", "peca_montagem", "sac"] },
-      // Recusados e taxa de estorno sao metricas negativas - nao fazem
-      // sentido na mesma cor verde usada pras demais (neutras/positivas),
-      // reaproveita as mesmas cores que badge-recusado/badge-estorno ja
-      // usam na tabela pra essa mesma situacao.
-      { chave: "statTileRecusados", valor: dados.totalRecusado, classe: "aviso", abas: ["", "saida_armazem", "peca_montagem", "sac"] },
-      { chave: "statTileTaxaEstorno", valor: (dados.taxaEstorno * 100).toFixed(1) + "%", classe: "erro", abas: null },
-      { chave: "statTileValorVendas", valor: formatarMoeda(dados.totalVendasCentavos), abas: ["", "sac"] },
-      { chave: "statTileValorGarantia", valor: formatarMoeda(dados.totalGarantiaCentavos), abas: ["", "sac"] },
-      { chave: "statTileMontado", valor: dados.totalMontado, abas: ["", "saida_armazem", "peca_montagem"] },
-      { chave: "statTileCaixa", valor: dados.totalCaixa, abas: ["", "saida_armazem", "peca_montagem"] }
-    ];
+  // Rotulo do numero "saiu pra fora" conforme a aba - em Saida de Armazem e
+  // expedicao pra cliente/transportadora, no SAC e o destino da peca, em
+  // Montagem e peca que foi pra fora (tecnico etc.), no Reparo e ida ao tecnico.
+  var ROTULO_SAIDA_POR_ABA = {
+    "": "kpiSaidaTodos",
+    saida_armazem: "kpiSaidaArmazem",
+    peca_montagem: "kpiSaidaMontagem",
+    sac: "kpiSaidaSac",
+    reparo_externo: "kpiSaidaReparo"
+  };
+
+  function kpiHtml(opcoes) {
+    return '<div class="kpi kpi-' + opcoes.tom + '">' +
+      '<div class="kpi-rotulo">' + opcoes.rotulo + '</div>' +
+      '<div class="kpi-valor">' + opcoes.valor +
+      (opcoes.unidade ? ' <span class="kpi-unidade">' + opcoes.unidade + '</span>' : "") + (opcoes.delta || "") + '</div>' +
+      (opcoes.sub ? '<div class="kpi-sub">' + opcoes.sub + '</div>' : "") +
+      (opcoes.nota ? '<div class="kpi-nota">' + opcoes.nota + '</div>' : "") +
+      '</div>';
   }
 
-  function renderizarInsights(filtrados, pendentesCount, comparacaoInsights) {
-    var dados = calcularInsights(filtrados, pendentesCount);
-    document.getElementById("grade-stats").innerHTML = construirStatTiles(dados)
-      .filter(function (item) { return !item.abas || item.abas.indexOf(abaAtual) >= 0; })
-      .map(function (item) {
-        var classeValor = "valor" + (item.classe ? " " + item.classe : "");
-        var delta = (item.comparar && comparacaoInsights) ? deltaTexto(item.valor, comparacaoInsights[item.comparar]) : "";
-        return '<div class="stat-tile"><div class="' + classeValor + '">' + item.valor + delta + '</div><div class="rotulo">' + t(item.chave) + '</div></div>';
-      }).join("");
+  function unidadesTexto(n) {
+    return t(Math.abs(n) === 1 ? "unidadeSingular" : "unidadePlural");
+  }
 
-    renderizarBarras("grafico-volume", dados.porDia, Object.keys(dados.porDia).sort(), formatarData);
-    var categorias = Object.keys(dados.porCategoria).sort(function (a, b) {
-      return dados.porCategoria[b] - dados.porCategoria[a];
+  // Transferencias ainda nao confirmadas que batem com a aba/armazem da tela
+  // (a lista em si e global, ver `buscarPendentesGlobal`): a do armazem
+  // filtrado aparece tanto se ele e a origem quanto o destino.
+  function pendentesNoFiltro(pendentes) {
+    var armazem = document.getElementById("filtro-armazem").value;
+    return pendentes.filter(function (m) {
+      if (abaAtual && m.fluxo !== abaAtual) return false;
+      return !armazem || m.armazem_codigo === armazem || m.armazem_destino_codigo === armazem;
     });
-    renderizarBarras("grafico-categorias", dados.porCategoria, categorias, rotuloCategoria, function (c) {
+  }
+
+  function construirKpis(d, comparacao, pendentes) {
+    var semTransferencia = abaAtual === "reparo_externo";
+    var cartoes = [];
+
+    var subSaida = "";
+    if (abaAtual === "") {
+      subSaida = ["saida_armazem", "sac", "peca_montagem", "reparo_externo"]
+        .filter(function (f) { return d.saidaPorFluxo[f]; })
+        .map(function (f) { return rotuloFluxo(f) + " <strong>" + d.saidaPorFluxo[f] + "</strong>"; })
+        .join(" &middot; ");
+    } else if (abaAtual === "saida_armazem" || abaAtual === "peca_montagem") {
+      if (d.montado || d.caixa) {
+        subSaida = t("montagemCaixa") + " <strong>" + d.caixa + "</strong> &middot; " +
+          t("montagemMontado") + " <strong>" + d.montado + "</strong>";
+      }
+    }
+    cartoes.push(kpiHtml({
+      tom: "saida",
+      rotulo: t(ROTULO_SAIDA_POR_ABA[abaAtual]),
+      valor: d.total.saida_externa,
+      unidade: unidadesTexto(d.total.saida_externa),
+      delta: comparacao ? deltaTexto(d.total.saida_externa, comparacao.total.saida_externa) : "",
+      sub: subSaida,
+      nota: semTransferencia ? "" : t("kpiSaidaNota")
+    }));
+
+    if (abaAtual === "" || abaAtual === "saida_armazem") {
+      var subPedidos = abaAtual === "" && (d.montado || d.caixa)
+        ? t("montagemCaixa") + " <strong>" + d.caixa + "</strong> &middot; " + t("montagemMontado") + " <strong>" + d.montado + "</strong>"
+        : "";
+      cartoes.push(kpiHtml({
+        tom: "pedidos",
+        rotulo: t("kpiPedidos"),
+        valor: d.pedidosExpedidos,
+        sub: subPedidos,
+        nota: t("kpiPedidosNota")
+      }));
+    }
+
+    cartoes.push(kpiHtml({
+      tom: "entrada",
+      rotulo: t(abaAtual === "reparo_externo" ? "kpiEntradaReparo" : "kpiEntrada"),
+      valor: d.total.entrada_externa,
+      unidade: unidadesTexto(d.total.entrada_externa),
+      delta: comparacao ? deltaTexto(d.total.entrada_externa, comparacao.total.entrada_externa) : "",
+      nota: semTransferencia ? "" : t("kpiEntradaNota")
+    }));
+
+    if (!semTransferencia) {
+      var emTransito = pendentesNoFiltro(pendentes).length;
+      cartoes.push(kpiHtml({
+        tom: "interno",
+        rotulo: t("kpiTransferencias"),
+        valor: d.total.transf_enviada,
+        unidade: t("kpiTransferenciasUnidade"),
+        sub: t("kpiTransferenciasRecebidas") + " <strong>" + d.total.transf_recebida + "</strong>" +
+          (emTransito ? ' &middot; <span class="texto-aviso">' + t("kpiTransferenciasTransito") + " <strong>" + emTransito + "</strong></span>" : ""),
+        nota: t("kpiTransferenciasNota")
+      }));
+    }
+    return cartoes.join("");
+  }
+
+  // Linha discreta abaixo dos numeros principais: quantidade de lancamentos,
+  // correcoes e (no SAC) valores. Antes eram tiles do mesmo tamanho dos
+  // numeros de movimento, disputando atencao com eles.
+  function construirFaixaSecundaria(d) {
+    var itens = [
+      "<span>" + t("secLancamentos") + " <strong>" + d.lancamentos + "</strong></span>"
+    ];
+    var taxa = d.lancamentos ? Math.round((d.estornos / d.lancamentos) * 1000) / 10 : 0;
+    itens.push('<span class="' + (d.estornos ? "texto-erro" : "") + '">' + t("secEstornos") + " <strong>" + d.estornos +
+      "</strong>" + (d.estornos ? " (" + String(taxa).replace(".", ",") + "%)" : "") + "</span>");
+    if (abaAtual !== "reparo_externo") {
+      itens.push('<span class="' + (d.recusas ? "texto-aviso" : "") + '">' + t("secRecusas") + " <strong>" + d.recusas + "</strong></span>");
+    }
+    if (abaAtual === "" || abaAtual === "sac") {
+      itens.push("<span>" + t("secVendasSac") + " <strong>" + formatarMoeda(d.vendasCentavos) + "</strong></span>");
+      itens.push("<span>" + t("secGarantiasSac") + " <strong>" + formatarMoeda(d.garantiaCentavos) + "</strong></span>");
+    }
+    return itens.join("");
+  }
+
+  // Tabela "Balanco por armazem": as 4 classes lado a lado, uma linha por
+  // armazem e uma linha "Empresa" que so soma o que entrou/saiu de fora -
+  // as colunas de transferencia ficam marcadas como internas nessa linha,
+  // que e justamente o ponto: o que o B2 mandou pro A4 nao e saida da empresa.
+  function construirBalanco(d) {
+    var semTransferencia = abaAtual === "reparo_externo";
+    var armazens = CODIGOS_ARMAZENS.filter(function (c) { return d.porArmazem[c]; });
+    if (!armazens.length) return "<p>" + t("semDadosPeriodo") + "</p>";
+    var colunas = semTransferencia
+      ? ["entrada_externa", "saida_externa"]
+      : ["entrada_externa", "transf_recebida", "transf_enviada", "saida_externa"];
+    var rotulos = {
+      entrada_externa: t("balancoEntrada"),
+      transf_recebida: t("balancoRecebido"),
+      transf_enviada: t("balancoEnviado"),
+      saida_externa: t("balancoSaida")
+    };
+    var cab = "<tr><th></th>" + colunas.map(function (c) {
+      var interna = c.indexOf("transf_") === 0;
+      return '<th class="' + (interna ? "col-interna" : "") + '">' + rotulos[c] + "</th>";
+    }).join("") + "</tr>";
+    var linhas = armazens.map(function (codigo) {
+      var b = d.porArmazem[codigo];
+      return '<tr><th scope="row">' + codigo + "</th>" + colunas.map(function (c) {
+        var interna = c.indexOf("transf_") === 0;
+        return '<td class="' + (interna ? "col-interna" : "") + (b[c] ? "" : " zero") + '">' + b[c] + "</td>";
+      }).join("") + "</tr>";
+    }).join("");
+    if (armazens.length > 1) {
+      linhas += '<tr class="linha-empresa"><th scope="row">' + t("balancoEmpresa") + "</th>" + colunas.map(function (c) {
+        if (c.indexOf("transf_") === 0) {
+          return '<td class="col-interna" title="' + t("balancoInternoTitulo") + '">' + t("balancoInterno") + "</td>";
+        }
+        return "<td>" + d.total[c] + "</td>";
+      }).join("") + "</tr>";
+    }
+    return '<div class="balanco-scroll"><table class="tabela-balanco">' + cab + linhas + "</table></div>";
+  }
+
+  // Entrou x saiu de fora por dia - duas barras por dia na mesma escala. So
+  // aparece com mais de um dia no periodo (com um dia so repete os numeros
+  // principais).
+  function construirGraficoDias(d) {
+    var dias = Object.keys(d.porDia).sort();
+    if (dias.length < 2) return "";
+    var max = 1;
+    dias.forEach(function (dia) { max = Math.max(max, d.porDia[dia].entrada, d.porDia[dia].saida); });
+    return dias.map(function (dia) {
+      var v = d.porDia[dia];
+      return '<div class="dia-linha"><span class="rotulo-barra">' + formatarData(dia) + "</span>" +
+        '<div class="dia-barras">' +
+        '<div class="barra-par"><span class="barra-cor barra-saida" style="width:' + Math.max(0, Math.round((v.saida / max) * 100)) + '%"></span><span class="valor-barra">' + v.saida + "</span></div>" +
+        '<div class="barra-par"><span class="barra-cor barra-entrada" style="width:' + Math.max(0, Math.round((v.entrada / max) * 100)) + '%"></span><span class="valor-barra">' + v.entrada + "</span></div>" +
+        "</div></div>";
+    }).join("");
+  }
+
+  // "29/09/2026 · A4" - o que o resumo esta somando, sem precisar olhar os filtros.
+  function textoPeriodoResumo() {
+    var f = lerFiltrosDaTela();
+    var periodo;
+    if (!f.dataInicio && !f.dataFim) periodo = t("periodoTudo");
+    else if (f.dataInicio === f.dataFim) periodo = formatarData(f.dataInicio);
+    else periodo = (f.dataInicio ? formatarData(f.dataInicio) : "...") + " – " + (f.dataFim ? formatarData(f.dataFim) : "...");
+    var partes = [periodo];
+    if (f.armazem) partes.push(f.armazem);
+    if (f.fluxo) partes.push(rotuloFluxo(f.fluxo));
+    return partes.join(" · ");
+  }
+
+  function renderizarInsights(filtrados, pendentes, comparacaoInsights, acharOriginal) {
+    var d = calcularInsights(filtrados, acharOriginal);
+    document.getElementById("periodo-resumo").textContent = textoPeriodoResumo();
+    document.getElementById("grade-kpis").innerHTML = construirKpis(d, comparacaoInsights, pendentes);
+    document.getElementById("faixa-secundaria").innerHTML = construirFaixaSecundaria(d);
+    document.getElementById("tabela-balanco").innerHTML = construirBalanco(d);
+
+    var graficoDias = construirGraficoDias(d);
+    document.getElementById("bloco-por-dia").classList.toggle("escondido", !graficoDias);
+    document.getElementById("grafico-dias").innerHTML = graficoDias;
+
+    var categorias = Object.keys(d.categoriasSaida)
+      .filter(function (c) { return d.categoriasSaida[c] !== 0; })
+      .sort(function (a, b) { return d.categoriasSaida[b] - d.categoriasSaida[a]; });
+    document.getElementById("bloco-categorias").classList.toggle("escondido", !categorias.length);
+    renderizarBarras("grafico-categorias", d.categoriasSaida, categorias, rotuloCategoria, function (c) {
       return CORES_CATEGORIA[c];
     });
-
-    // So faz sentido comparar armazem/fluxo quando o filtro ativo nao ja
-    // restringiu a um so - com um so armazem/fluxo no resultado a
-    // comparacao vira um grafico de uma barra so, sem informacao nova.
-    var blocoArmazem = document.getElementById("bloco-por-armazem");
-    var chavesArmazem = Object.keys(dados.porArmazem);
-    if (chavesArmazem.length > 1) {
-      blocoArmazem.classList.remove("escondido");
-      renderizarBarras("grafico-armazem", dados.porArmazem, chavesArmazem.sort(), function (c) { return c; }, function (c) {
-        return CORES_ARMAZEM[c];
-      });
-    } else {
-      blocoArmazem.classList.add("escondido");
-    }
-
-    var blocoFluxo = document.getElementById("bloco-por-fluxo");
-    var chavesFluxo = Object.keys(dados.porFluxo);
-    if (chavesFluxo.length > 1) {
-      blocoFluxo.classList.remove("escondido");
-      renderizarBarras("grafico-fluxo", dados.porFluxo, chavesFluxo.sort(), rotuloFluxo, function (f) {
-        return CORES_FLUXO[f];
-      });
-    } else {
-      blocoFluxo.classList.add("escondido");
-    }
   }
 
-  // `corPara` e opcional - quando omitido (grafico "Volume por dia", uma
-  // serie temporal, nao uma comparacao entre entidades) todas as barras
-  // ficam verdes, como antes.
+  // `corPara` e opcional - sem ele todas as barras ficam verdes.
   function renderizarBarras(elId, valores, chaves, rotular, corPara) {
     var max = Math.max.apply(null, chaves.map(function (c) { return valores[c]; }).concat([1]));
     document.getElementById(elId).innerHTML = chaves.map(function (c) {
@@ -2267,7 +2596,12 @@
   function reaplicarBusca() {
     var comBusca = aplicarBusca(ultimosFiltrados.movimentos);
     renderizarTabela(comBusca, ultimosFiltrados.movimentos.length, ultimosFiltrados.truncado);
-    renderizarInsights(comBusca, ultimosFiltrados.pendentesCount, ultimosFiltrados.comparacaoInsights);
+    renderizarInsights(
+      comBusca,
+      ultimosFiltrados.pendentes,
+      ultimosFiltrados.comparacaoInsights,
+      criarBuscaOriginal(ultimosFiltrados.movimentos, ultimosFiltrados.referenciasEstorno)
+    );
     document.getElementById("aviso-truncado").classList.toggle("escondido", !ultimosFiltrados.truncado);
   }
 
@@ -2322,7 +2656,7 @@
       } else if (cacheValido) {
         comparacaoInsights = comparacaoCache.insights;
       } else {
-        comparacaoInsights = dadosComparacao ? calcularInsights(dadosComparacao.movimentos, 0) : null;
+        comparacaoInsights = dadosComparacao ? calcularInsights(dadosComparacao.movimentos, criarBuscaOriginal(dadosComparacao.movimentos, null)) : null;
         comparacaoCache = { chave: chaveComparacao, insights: comparacaoInsights, timestampMs: Date.now() };
       }
       renderizarContagemAbas(contagemPorFluxo);
@@ -2347,7 +2681,7 @@
       ultimosFiltrados = {
         movimentos: dadosFiltrados.movimentos,
         truncado: dadosFiltrados.truncado,
-        pendentesCount: pendentes.length,
+        pendentes: pendentes,
         referenciasEstorno: referenciasEstorno,
         comparacaoInsights: comparacaoInsights
       };
