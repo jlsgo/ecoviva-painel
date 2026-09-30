@@ -696,9 +696,8 @@
         </label>
         <label>&nbsp;
           <div class="atalhos-periodo">
-            <button type="button" class="atalho" data-dias="0" data-i18n="atalhoHoje">Hoje</button>
-            <button type="button" class="atalho" data-dias="7" data-i18n="atalho7dias">7 dias</button>
-            <button type="button" class="atalho" data-dias="30" data-i18n="atalho30dias">30 dias</button>
+            <button type="button" class="atalho" data-periodo="hoje" data-i18n="atalhoHoje">Hoje</button>
+            <button type="button" class="atalho" data-periodo="mes" data-i18n="atalhoMesAtual">Mes atual</button>
           </div>
         </label>
         <label>&nbsp;
@@ -956,8 +955,7 @@
       filtroDeLabel: "De",
       filtroAteLabel: "Ate",
       atalhoHoje: "Hoje",
-      atalho7dias: "7 dias",
-      atalho30dias: "30 dias",
+      atalhoMesAtual: "Mes atual",
       filtroResponsavelLabel: "Responsavel",
       filtroTipoLabel: "Tipo",
       tipoEntrada: "Entrada",
@@ -1106,8 +1104,7 @@
       filtroDeLabel: "从",
       filtroAteLabel: "至",
       atalhoHoje: "今天",
-      atalho7dias: "7天",
-      atalho30dias: "30天",
+      atalhoMesAtual: "本月",
       filtroResponsavelLabel: "负责人",
       filtroTipoLabel: "类型",
       tipoEntrada: "入库",
@@ -2844,9 +2841,22 @@
   // dataFim] informado - usado pra comparacao de tendencia nos stat tiles
   // (ver `deltaTexto`). Ex.: filtro 01/09-10/09 (10 dias) -> anterior e
   // 22/08-31/08 (tambem 10 dias, terminando um dia antes do inicio atual).
+  //
+  // Periodo que comeca no dia 1 e termina no mesmo mes compara com o mes
+  // anterior pelo calendario (Mes atual 01-15/10 -> 01-15/09; mes inteiro
+  // 01-30/09 -> 01-31/08), nao com os N dias corridos anteriores.
   function periodoAnterior(dataInicioStr, dataFimStr) {
     var inicio = new Date(dataInicioStr + "T00:00:00");
     var fim = new Date(dataFimStr + "T00:00:00");
+    if (inicio.getDate() === 1 && inicio.getMonth() === fim.getMonth() && inicio.getFullYear() === fim.getFullYear()) {
+      var ultimoDiaDoMes = new Date(fim.getFullYear(), fim.getMonth() + 1, 0).getDate();
+      var ultimoDiaAnterior = new Date(fim.getFullYear(), fim.getMonth(), 0).getDate();
+      var diaFim = fim.getDate() === ultimoDiaDoMes ? ultimoDiaAnterior : Math.min(fim.getDate(), ultimoDiaAnterior);
+      return {
+        dataInicio: dataIso(new Date(fim.getFullYear(), fim.getMonth() - 1, 1)),
+        dataFim: dataIso(new Date(fim.getFullYear(), fim.getMonth() - 1, diaFim))
+      };
+    }
     var dias = Math.round((fim - inicio) / 86400000) + 1;
     var novoFim = new Date(inicio);
     novoFim.setDate(novoFim.getDate() - 1);
@@ -2942,21 +2952,22 @@
     return data.getFullYear() + "-" + pad(data.getMonth() + 1) + "-" + pad(data.getDate());
   }
 
-  function subtrairDias(dias) {
-    var data = new Date();
-    data.setDate(data.getDate() - dias);
-    return dataIso(data);
+  // Atalhos de periodo: "Hoje" e "Mes atual" (do dia 1 ate hoje). "7 dias" e
+  // "30 dias" sairam a pedido do gestor - o que ele acompanha e o mes.
+  function intervaloDoAtalho(periodo) {
+    var hoje = new Date();
+    var inicio = periodo === "mes" ? new Date(hoje.getFullYear(), hoje.getMonth(), 1) : hoje;
+    return { dataInicio: dataIso(inicio), dataFim: dataIso(hoje) };
   }
 
-  // Marca visualmente qual atalho (Hoje/7 dias/30 dias) corresponde ao
+  // Marca visualmente qual atalho (Hoje/Mes atual) corresponde ao
   // periodo atualmente nos campos De/Ate - antes nenhum atalho mostrava
   // estado "selecionado", entao nao dava pra saber o que estava aplicado
   // sem olhar os dois campos de data.
   function atualizarEstadoAtalhos(filtros) {
-    var hoje = dataIso(new Date());
     document.querySelectorAll(".atalho").forEach(function (botao) {
-      var dias = Number(botao.getAttribute("data-dias"));
-      var ativo = filtros.dataFim === hoje && filtros.dataInicio === subtrairDias(dias);
+      var intervalo = intervaloDoAtalho(botao.getAttribute("data-periodo"));
+      var ativo = filtros.dataInicio === intervalo.dataInicio && filtros.dataFim === intervalo.dataFim;
       botao.classList.toggle("ativo", ativo);
     });
   }
@@ -3022,12 +3033,9 @@
 
     document.querySelectorAll(".atalho").forEach(function (botao) {
       botao.addEventListener("click", function () {
-        var dias = Number(botao.getAttribute("data-dias"));
-        var fim = new Date();
-        var inicio = new Date();
-        inicio.setDate(inicio.getDate() - dias);
-        document.getElementById("filtro-data-inicio").value = dataIso(inicio);
-        document.getElementById("filtro-data-fim").value = dataIso(fim);
+        var intervalo = intervaloDoAtalho(botao.getAttribute("data-periodo"));
+        document.getElementById("filtro-data-inicio").value = intervalo.dataInicio;
+        document.getElementById("filtro-data-fim").value = intervalo.dataFim;
         atualizar();
       });
     });
