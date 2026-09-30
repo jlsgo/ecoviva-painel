@@ -348,6 +348,8 @@
      suporta armazem_destino); "Reparos em aberto" so existe pra Reparo
      Externo - cada card so aparece onde faz sentido. */
   #conteudo[data-aba-atual="reparo_externo"] #cartao-pendentes { display: none; }
+  /* Sem nada pendente o quadro some - a faixa de atencao ja diz "Nada pendente". */
+  #cartao-pendentes.vazio, #cartao-reparos-abertos.vazio { display: none; }
   #conteudo:not([data-aba-atual="todos"]):not([data-aba-atual="reparo_externo"]) #cartao-reparos-abertos { display: none; }
   th { position: sticky; top: 0; background: var(--cartao); white-space: normal; vertical-align: bottom; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
   tbody tr:hover { background: var(--bg); }
@@ -502,9 +504,47 @@
   .kpi-unidade { font-size: 0.8rem; font-weight: 600; color: var(--texto-suave); }
   .kpi-sub { font-size: 0.8rem; }
   .kpi-sub strong, .faixa-secundaria strong { font-variant-numeric: tabular-nums; }
-  .kpi-divisao { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; margin: 2px 0 4px; }
-  .kpi-divisao strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
-  .tabela-balanco .divisao { display: block; font-size: 0.68rem; font-weight: 400; color: var(--texto-suave); white-space: nowrap; }
+  .kpi-divisao { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 4px; padding: 8px 0; border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda); }
+  .kpi-divisao span { display: flex; flex-direction: column; font-size: 0.7rem; font-weight: 700; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.03em; }
+  .kpi-divisao strong { font-size: 1.4rem; font-weight: 800; color: var(--texto); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  .tabela-balanco .divisao { display: block; font-size: 0.74rem; font-weight: 500; color: var(--texto-suave); white-space: nowrap; margin-top: 2px; }
+  /* Um quadro por tipo de lancamento (aba Todos) - mesma cor da aba dele;
+     clicar abre a aba. */
+  .grade-fluxos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+  .grade-fluxos-titulo { margin: 18px 0 0; font-size: 0.85rem; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.03em; }
+  button.card-fluxo {
+    --cor: var(--verde);
+    background: var(--bg); color: var(--texto); font: inherit; text-align: left; cursor: pointer;
+    border: 1px solid var(--borda); border-top: 4px solid var(--cor); border-radius: 8px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
+  }
+  button.card-fluxo:hover { border-color: var(--cor); background: var(--bg); }
+  .card-fluxo-saida_armazem { --cor: var(--grafico-1) !important; }
+  .card-fluxo-peca_montagem { --cor: var(--grafico-4) !important; }
+  .card-fluxo-sac { --cor: var(--grafico-6) !important; }
+  .card-fluxo-reparo_externo { --cor: var(--grafico-8) !important; }
+  .card-fluxo-titulo { font-size: 0.78rem; font-weight: 800; color: var(--cor); text-transform: uppercase; letter-spacing: 0.03em; display: flex; justify-content: space-between; }
+  .card-fluxo-titulo small { font-weight: 600; color: var(--texto-suave); text-transform: none; letter-spacing: 0; }
+  .card-fluxo-destaque { font-size: 0.8rem; color: var(--texto-suave); }
+  .card-fluxo-destaque strong { display: block; font-size: 1.8rem; font-weight: 800; line-height: 1.1; color: var(--texto); font-variant-numeric: tabular-nums; }
+  .card-fluxo-linhas { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; margin: 0; font-size: 0.84rem; }
+  .card-fluxo-linhas dt { color: var(--texto-suave); }
+  .card-fluxo-linhas dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+  .card-fluxo-linhas dd.negativo { color: var(--erro); }
+  /* Abas internas do resumo */
+  .subabas { display: flex; flex-wrap: wrap; gap: 4px; margin: 14px 0 6px; border-bottom: 1px solid var(--borda); }
+  button.subaba { background: none; border: none; border-bottom: 3px solid transparent; border-radius: 0; padding: 8px 14px; color: var(--texto-suave); font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer; margin-bottom: -1px; }
+  button.subaba:hover { color: var(--texto); background: none; }
+  button.subaba.ativa { color: var(--verde); border-bottom-color: var(--verde); }
+  .subaba-oculta { display: none !important; }
+  /* Faixa de atencao (sincronizacao + pendencias) */
+  .atencao-itens { display: flex; flex-wrap: wrap; gap: 8px; }
+  button.chip-atencao { background: var(--cartao); color: var(--texto); border: 1px solid var(--borda); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
+  button.chip-atencao strong { font-variant-numeric: tabular-nums; }
+  button.chip-atencao.alerta { border-color: var(--erro); color: var(--erro); }
+  button.chip-atencao.aviso { border-color: var(--aviso); color: var(--aviso); }
+  button.chip-atencao:hover { background: var(--bg); }
+  .chip-ok { font-size: 0.8rem; color: var(--texto-suave); }
   .kpi-nota { font-size: 0.72rem; color: var(--texto-suave); margin-top: auto; padding-top: 4px; }
   .texto-aviso { color: var(--aviso); }
   .texto-erro { color: var(--erro); }
@@ -512,8 +552,24 @@
   .faixa-secundaria strong { color: var(--texto); }
   .faixa-secundaria .texto-aviso strong, .faixa-secundaria .texto-erro strong { color: inherit; }
   .balanco-scroll { overflow-x: auto; }
-  .tabela-balanco { width: 100%; border-collapse: collapse; font-size: 0.85rem; font-variant-numeric: tabular-nums; table-layout: auto; }
-  .tabela-balanco th, .tabela-balanco td { white-space: normal; padding: 8px 12px; border-bottom: 1px solid var(--borda); text-align: right; }
+  .tabela-balanco { width: 100%; border-collapse: collapse; font-size: 0.95rem; font-variant-numeric: tabular-nums; table-layout: auto; }
+  .tabela-balanco th, .tabela-balanco td { white-space: normal; padding: 10px 14px; border-bottom: 1px solid var(--borda); text-align: center; }
+  #tabela-balanco td { font-size: 1.15rem; font-weight: 700; }
+  #tabela-balanco th[scope="row"] { font-size: 1rem; vertical-align: middle; }
+  #tabela-balanco td { vertical-align: middle; }
+  /* Por dia em colunas (era uma linha por dia - um mes ocupava a tela toda).
+     Escala pela maior saida; uma entrada muito maior (chegada de carga) sai
+     cortada, com o valor em cima, pra nao achatar os outros dias. */
+  .dias-colunas { display: flex; align-items: stretch; gap: 3px; height: 190px; overflow-x: auto; padding-top: 14px; }
+  .dia-col { flex: 1 0 14px; display: flex; flex-direction: column; align-items: center; min-width: 14px; }
+  .dia-col-barras { flex: 1; width: 100%; display: flex; align-items: flex-end; justify-content: center; gap: 1px; position: relative; }
+  .bv { width: 42%; max-width: 12px; border-radius: 2px 2px 0 0; min-height: 1px; position: relative; }
+  .bv.barra-saida { background: var(--azul); }
+  .bv.barra-entrada { background: var(--verde); }
+  .bv.cortada { background: repeating-linear-gradient(45deg, var(--verde), var(--verde) 4px, var(--verde-escuro) 4px, var(--verde-escuro) 8px); }
+  .bv-valor { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 0.62rem; font-weight: 700; color: var(--texto-suave); white-space: nowrap; }
+  .dia-col-rotulo { font-size: 0.66rem; color: var(--texto-suave); line-height: 1.15; text-align: center; margin-top: 3px; font-variant-numeric: tabular-nums; }
+  .dia-col-rotulo.fim-de-semana { color: var(--aviso); }
   .tabela-balanco tr:first-child th { font-size: 0.72rem; font-weight: 700; color: var(--texto-suave); text-transform: uppercase; letter-spacing: 0.02em; vertical-align: bottom; }
   .tabela-balanco th[scope="row"] { text-align: left; font-weight: 700; }
   .tabela-balanco .col-interna { color: var(--interno); background: color-mix(in srgb, var(--interno) 7%, transparent); }
@@ -704,8 +760,11 @@
         <label>&nbsp;
           <button id="botao-atualizar" data-i18n="botaoAtualizar">Atualizar agora</button>
         </label>
+        <label>&nbsp;
+          <button type="button" id="botao-mais-filtros" class="atalho" aria-expanded="false" aria-controls="filtros-refinar"><span data-i18n="maisFiltros">Mais filtros</span><span id="contagem-filtros"></span></button>
+        </label>
       </div>
-      <div class="filtros-linha filtros-linha-refinar">
+      <div class="filtros-linha filtros-linha-refinar escondido" id="filtros-refinar">
         <label class="campo-destaque"><span data-i18n="filtroPedidoLabel">Numero do pedido</span>
           <input id="filtro-pedido" type="search" placeholder="Ex: 3893" data-i18n-placeholder="filtroPedidoPlaceholder" />
         </label>
@@ -741,6 +800,7 @@
     <div class="faixa-sync" title="Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado." data-i18n-title="cartaoSyncSubtitulo">
       <span class="faixa-sync-rotulo" data-i18n="faixaSyncRotulo">Ultima sincronizacao</span>
       <div id="status-armazens" class="status-armazens"></div>
+      <div id="atencao-itens" class="atencao-itens"></div>
     </div>
 
     <section class="cartao" id="cartao-insights">
@@ -753,7 +813,15 @@
         <svg class="icone-inline" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>
         <span data-i18n="avisoTruncadoTexto">Este filtro tem mais movimentos do que o carregado - os numeros abaixo estao incompletos. Reduza o periodo ou refine o filtro pra ver o total real.</span>
       </p>
+      <nav class="subabas" role="tablist">
+        <button type="button" class="subaba" data-subaba="geral" role="tab" data-i18n="subabaGeral">Visao geral</button>
+        <button type="button" class="subaba" data-subaba="sac" role="tab" data-i18n="subabaSac">SAC e valores</button>
+        <button type="button" class="subaba" data-subaba="erros" role="tab" data-i18n="subabaErros">Erros e correcoes</button>
+      </nav>
+      <div data-painel-subaba="geral">
       <div id="grade-kpis" class="grade-kpis"></div>
+      <h4 class="grade-fluxos-titulo" id="grade-fluxos-titulo" data-i18n="gradeFluxosTitulo">Por tipo de lancamento</h4>
+      <div id="grade-fluxos" class="grade-fluxos"></div>
       <div id="faixa-secundaria" class="faixa-secundaria"></div>
       <div class="grafico-bloco">
         <h4 data-i18n="balancoTitulo">Balanco por armazem (unidades)</h4>
@@ -773,6 +841,8 @@
           <div id="grafico-categorias"></div>
         </div>
       </div>
+      </div>
+      <div data-painel-subaba="sac">
       <div class="grafico-bloco escondido" id="bloco-sac">
         <h4 data-i18n="sacTitulo">SAC - vendas x garantias</h4>
         <div id="tabela-sac-meses"></div>
@@ -788,6 +858,8 @@
         </div>
         <p class="nota-sac" data-i18n="sacNota">Mesmas regras dos totais acima (estorno desconta). O valor e gravado por lancamento: por item ele e estimado (~), dividido entre os itens do lancamento pela quantidade. "Sem valor" sao garantias gravadas antes de o valor ser obrigatorio.</p>
       </div>
+      </div>
+      <div data-painel-subaba="erros">
       <div class="grafico-bloco escondido" id="bloco-erros">
         <h4 data-i18n="errosTitulo">Erros e correcoes</h4>
         <div id="resumo-erros" class="faixa-secundaria"></div>
@@ -810,6 +882,7 @@
           <div id="tabela-erros-recusas"></div>
         </div>
         <p class="nota-sac" data-i18n="errosNota">Estorno conta para quem fez o lancamento original; recusa conta para quem enviou. Taxa = estornos / lancamentos do grupo. Causas agrupadas por palavras do texto da justificativa (passe o mouse para ver os textos). E para achar o processo que gera erro, nao para comparar pessoas: quem lanca mais tambem tem mais chance de errar.</p>
+      </div>
       </div>
     </section>
 
@@ -1075,6 +1148,26 @@
       legendaSaida: "Saiu para fora",
       legendaEntrada: "Entrou de fora",
       graficoCategoriasTitulo: "O que saiu para fora, por categoria",
+      maisFiltros: "Mais filtros",
+      subabaGeral: "Visao geral",
+      subabaSac: "SAC e valores",
+      subabaErros: "Erros e correcoes",
+      gradeFluxosTitulo: "Por tipo de lancamento",
+      cardFluxoAbrir: "ver aba",
+      fluxoExpedido: "Expedido para cliente / transportadora",
+      fluxoTransfEnviada: "Enviado ao outro armazem",
+      fluxoTransfRecebida: "Recebido do outro armazem",
+      fluxoSacSaiu: "Pecas que sairam do SAC",
+      fluxoSacDevolucoes: "Entrou no SAC",
+      fluxoSacSaldo: "Vendas - garantias",
+      fluxoMontagemFora: "Saiu para fora",
+      fluxoReparoEnviado: "Enviado ao tecnico",
+      fluxoReparoVoltou: "Voltou do tecnico",
+      fluxoReparoAberto: "Em aberto agora",
+      atencaoTransf: "Transferencias aguardando confirmacao:",
+      atencaoRecusas: "Recusas sem estorno:",
+      atencaoReparos: "Reparos em aberto:",
+      atencaoTudoEmDia: "Nada pendente.",
       sacTitulo: "SAC - vendas x garantias",
       sacGarantiasItemTitulo: "Garantias por item",
       sacVendasItemTitulo: "Vendas por item",
@@ -1266,6 +1359,26 @@
       legendaSaida: "对外出库",
       legendaEntrada: "外部入库",
       graficoCategoriasTitulo: "对外出库（按类别）",
+      maisFiltros: "更多筛选",
+      subabaGeral: "总览",
+      subabaSac: "客服与金额",
+      subabaErros: "错误与更正",
+      gradeFluxosTitulo: "按记录类型",
+      cardFluxoAbrir: "查看",
+      fluxoExpedido: "发给客户 / 物流",
+      fluxoTransfEnviada: "发往另一仓库",
+      fluxoTransfRecebida: "从另一仓库收到",
+      fluxoSacSaiu: "客服发出的零件",
+      fluxoSacDevolucoes: "客服入库",
+      fluxoSacSaldo: "销售 - 保修",
+      fluxoMontagemFora: "对外出库",
+      fluxoReparoEnviado: "送外部维修",
+      fluxoReparoVoltou: "维修返回",
+      fluxoReparoAberto: "当前未结",
+      atencaoTransf: "待确认调拨：",
+      atencaoRecusas: "未冲销拒收：",
+      atencaoReparos: "未结维修：",
+      atencaoTudoEmDia: "没有待处理事项。",
       sacTitulo: "客服 - 销售与保修",
       sacGarantiasItemTitulo: "保修（按商品）",
       sacVendasItemTitulo: "销售（按商品）",
@@ -2161,6 +2274,7 @@
   function renderizarPendentes(pendentes) {
     ultimosPendentesCache = pendentes;
     var el = document.getElementById("lista-pendentes");
+    document.getElementById("cartao-pendentes").classList.toggle("vazio", pendentesNoFiltro(pendentes).length === 0);
     if (pendentes.length === 0) {
       el.innerHTML = "<p>" + t("nenhuma") + "</p>";
       return;
@@ -2181,6 +2295,7 @@
   function renderizarReparosAbertos(abertos) {
     ultimosReparosAbertosCache = abertos;
     var el = document.getElementById("lista-reparos-abertos");
+    document.getElementById("cartao-reparos-abertos").classList.toggle("vazio", abertos.length === 0);
     if (abertos.length === 0) {
       el.innerHTML = "<p>" + t("nenhuma") + "</p>";
       return;
@@ -2488,6 +2603,7 @@
       totalGrupo: novoBalancoPorGrupo(),
       porArmazem: {},
       porArmazemGrupo: {},
+      porFluxo: {},
       porDia: {},
       saidaPorFluxo: {},
       categoriasSaida: {},
@@ -2509,11 +2625,19 @@
       armazem[c.classe] += qtd;
       r.total[c.classe] += qtd;
       var armazemGrupo = r.porArmazemGrupo[m.armazem_codigo] || (r.porArmazemGrupo[m.armazem_codigo] = novoBalancoPorGrupo());
+      var fluxo = r.porFluxo[m.fluxo] || (r.porFluxo[m.fluxo] = {
+        balanco: novoBalanco(), grupo: novoBalancoPorGrupo(), montado: 0, caixa: 0, pedidos: {}, lancamentos: 0
+      });
+      fluxo.balanco[c.classe] += qtd;
+      if (m.estornado_de == null) fluxo.lancamentos += 1;
       m.itens.forEach(function (it) {
         var g = grupoDaCategoria(it.categoria);
         var q = c.sinal * (it.quantidade || 0);
         r.totalGrupo[g][c.classe] += q;
         armazemGrupo[g][c.classe] += q;
+        fluxo.grupo[g][c.classe] += q;
+        if (c.classe === "saida_externa" && it.montagem === "montado") fluxo.montado += q;
+        if (c.classe === "saida_externa" && it.montagem === "caixa") fluxo.caixa += q;
       });
 
       var dia = r.porDia[m.data] || (r.porDia[m.data] = { entrada: 0, saida: 0 });
@@ -2626,9 +2750,14 @@
 
   function renderizarSac(filtrados, acharOriginal) {
     var sac = (abaAtual === "" || abaAtual === "sac") ? calcularSac(filtrados, acharOriginal) : null;
-    var mostrar = !!(sac && sac.temDados);
-    document.getElementById("bloco-sac").classList.toggle("escondido", !mostrar);
-    if (!mostrar) return;
+    document.getElementById("bloco-sac").classList.toggle("escondido", !sac);
+    if (!sac) return;
+    if (!sac.temDados) {
+      document.getElementById("tabela-sac-meses").innerHTML = "<p>" + t("semDadosPeriodo") + "</p>";
+      document.getElementById("tabela-sac-garantias").innerHTML = "";
+      document.getElementById("tabela-sac-vendas").innerHTML = "";
+      return;
+    }
     document.getElementById("tabela-sac-meses").innerHTML = construirTabelaSacMeses(sac);
     document.getElementById("tabela-sac-garantias").innerHTML = construirTabelaSacItens(sac.garantiaPorItem);
     document.getElementById("tabela-sac-vendas").innerHTML = construirTabelaSacItens(sac.vendaPorItem);
@@ -2754,9 +2883,8 @@
 
   function renderizarErros(filtrados, acharOriginal) {
     var e = calcularErros(filtrados, acharOriginal);
-    var mostrar = e.lancamentos > 0;
-    document.getElementById("bloco-erros").classList.toggle("escondido", !mostrar);
-    if (!mostrar) return;
+    recusasAbertasNoPeriodo = e.abertas;
+    document.getElementById("bloco-erros").classList.remove("escondido");
     var tempo = e.comDias ? Math.round((e.somaDias / e.comDias) * 10) / 10 : null;
     document.getElementById("resumo-erros").innerHTML = [
       "<span>" + t("errosResumoTaxa") + " <strong>" + taxaTexto(e.estornos, e.lancamentos) + "</strong> (" + e.estornos + "/" + e.lancamentos + ")</span>",
@@ -2798,6 +2926,71 @@
           "</td>" + situacao + "</tr>";
       })
     ) : "<p>" + t("errosSemRecusas") + "</p>";
+  }
+
+  // Abas internas do resumo (Visao geral / SAC e valores / Erros). A de SAC
+  // so existe nas abas Todos e SAC. Lembrada por maquina, como a aba de fluxo.
+  var CHAVE_SUBABA = "ecoviva-painel-subaba";
+  var subabaAtual = "geral";
+  try { subabaAtual = localStorage.getItem(CHAVE_SUBABA) || "geral"; } catch (e) {}
+  var recusasAbertasNoPeriodo = 0;
+
+  function aplicarSubaba() {
+    var temSac = abaAtual === "" || abaAtual === "sac";
+    if (subabaAtual === "sac" && !temSac) subabaAtual = "geral";
+    document.querySelectorAll(".subaba").forEach(function (botao) {
+      var nome = botao.getAttribute("data-subaba");
+      botao.classList.toggle("ativa", nome === subabaAtual);
+      botao.setAttribute("aria-selected", nome === subabaAtual ? "true" : "false");
+      botao.classList.toggle("subaba-oculta", nome === "sac" && !temSac);
+    });
+    document.querySelectorAll("[data-painel-subaba]").forEach(function (el) {
+      el.classList.toggle("subaba-oculta", el.getAttribute("data-painel-subaba") !== subabaAtual);
+    });
+  }
+
+  function selecionarSubaba(nome) {
+    subabaAtual = nome;
+    try { localStorage.setItem(CHAVE_SUBABA, nome); } catch (e) {}
+    aplicarSubaba();
+  }
+
+  // "Mais filtros": pedido/responsavel/tipo/situacao/busca ficam recolhidos;
+  // o botao mostra quantos estao em uso e abre sozinho se algum estiver.
+  function filtrosRefinarAtivos() {
+    return ["filtro-pedido", "filtro-responsavel", "filtro-tipo", "filtro-situacao", "filtro-busca"].filter(function (id) {
+      var el = document.getElementById(id);
+      return el && el.value && el.value.trim() !== "";
+    }).length;
+  }
+
+  function atualizarBotaoMaisFiltros() {
+    var n = filtrosRefinarAtivos();
+    document.getElementById("contagem-filtros").textContent = n ? " (" + n + ")" : "";
+    if (n) mostrarMaisFiltros(true);
+  }
+
+  function mostrarMaisFiltros(abrir) {
+    document.getElementById("filtros-refinar").classList.toggle("escondido", !abrir);
+    document.getElementById("botao-mais-filtros").setAttribute("aria-expanded", abrir ? "true" : "false");
+    document.getElementById("botao-mais-filtros").classList.toggle("ativo", abrir);
+  }
+
+  // Faixa de atencao, junto com a sincronizacao: o que precisa de acao, com
+  // atalho pro detalhe. Recusas contam so as do periodo carregado.
+  function renderizarAtencao() {
+    var el = document.getElementById("atencao-itens");
+    if (!el) return;
+    var chips = [];
+    var transf = pendentesNoFiltro(ultimosPendentesCache || []).length;
+    if (transf) chips.push('<button type="button" class="chip-atencao aviso" data-ir="cartao-pendentes">' + t("atencaoTransf") + " <strong>" + transf + "</strong></button>");
+    if (recusasAbertasNoPeriodo) chips.push('<button type="button" class="chip-atencao alerta" data-ir-subaba="erros">' + t("atencaoRecusas") + " <strong>" + recusasAbertasNoPeriodo + "</strong></button>");
+    var armazem = document.getElementById("filtro-armazem").value;
+    var reparos = (ultimosReparosAbertosCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; }).length;
+    if (reparos && (abaAtual === "" || abaAtual === "reparo_externo")) {
+      chips.push('<button type="button" class="chip-atencao" data-ir="cartao-reparos-abertos">' + t("atencaoReparos") + " <strong>" + reparos + "</strong></button>");
+    }
+    el.innerHTML = chips.join("") || '<span class="chip-ok">' + t("atencaoTudoEmDia") + "</span>";
   }
 
   function formatarMoeda(centavos) {
@@ -2894,6 +3087,66 @@
       " &middot; " + t("grupoPecasCurto") + " " + porGrupo.peca[classe] + "</span>";
   }
 
+  // Um quadro por tipo de lancamento na aba Todos: separa o que e Saida de
+  // Armazem, SAC, Montagem e Reparo em vez de tudo somado num numero so.
+  // Clicar abre a aba do fluxo.
+  function linhasFluxo(pares) {
+    return '<dl class="card-fluxo-linhas">' + pares.filter(Boolean).map(function (p) {
+      return "<dt>" + p[0] + '</dt><dd class="' + (p[2] || "") + '">' + p[1] + "</dd>";
+    }).join("") + "</dl>";
+  }
+
+  function cardFluxoHtml(fluxo, destaqueRotulo, destaqueValor, pares, lancamentos) {
+    return '<button type="button" class="card-fluxo card-fluxo-' + fluxo + '" data-abrir-fluxo="' + fluxo + '">' +
+      '<span class="card-fluxo-titulo">' + rotuloFluxo(fluxo) + " <small>" + lancamentos + " " + t("secLancamentos").toLowerCase() + "</small></span>" +
+      '<span class="card-fluxo-destaque">' + destaqueRotulo + "<strong>" + destaqueValor + "</strong></span>" +
+      linhasFluxo(pares) + "</button>";
+  }
+
+  function construirCardsFluxo(d) {
+    var vazio = { balanco: novoBalanco(), grupo: novoBalancoPorGrupo(), montado: 0, caixa: 0, lancamentos: 0 };
+    var f = function (nome) { return d.porFluxo[nome] || vazio; };
+    var cards = [];
+    var sa = f("saida_armazem");
+    if (sa.lancamentos) {
+      cards.push(cardFluxoHtml("saida_armazem", t("fluxoExpedido"), sa.balanco.saida_externa, [
+        [t("grupoVeiculos"), sa.grupo.veiculo.saida_externa],
+        [t("grupoPecas"), sa.grupo.peca.saida_externa],
+        [t("kpiPedidos"), d.pedidosExpedidos],
+        (sa.caixa || sa.montado) ? [t("montagemCaixa") + " / " + t("montagemMontado"), sa.caixa + " / " + sa.montado] : null,
+        sa.balanco.transf_enviada ? [t("fluxoTransfEnviada"), sa.balanco.transf_enviada] : null
+      ], sa.lancamentos));
+    }
+    var sac = f("sac");
+    if (sac.lancamentos) {
+      var saldo = d.vendasCentavos - d.garantiaCentavos;
+      cards.push(cardFluxoHtml("sac", t("fluxoSacSaiu"), sac.balanco.saida_externa, [
+        [t("fluxoSacDevolucoes"), sac.balanco.entrada_externa],
+        [t("secVendasSac"), formatarMoeda(d.vendasCentavos)],
+        [t("secGarantiasSac"), formatarMoeda(d.garantiaCentavos)],
+        [t("fluxoSacSaldo"), formatarMoeda(saldo), saldo < 0 ? "negativo" : ""]
+      ], sac.lancamentos));
+    }
+    var mo = f("peca_montagem");
+    if (mo.lancamentos) {
+      cards.push(cardFluxoHtml("peca_montagem", t("fluxoTransfEnviada"), mo.balanco.transf_enviada, [
+        [t("fluxoTransfRecebida"), mo.balanco.transf_recebida],
+        [t("fluxoMontagemFora"), mo.balanco.saida_externa],
+        mo.balanco.entrada_externa ? [t("kpiEntrada"), mo.balanco.entrada_externa] : null
+      ], mo.lancamentos));
+    }
+    var re = f("reparo_externo");
+    var armazem = document.getElementById("filtro-armazem").value;
+    var abertos = (ultimosReparosAbertosCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; }).length;
+    if (re.lancamentos || abertos) {
+      cards.push(cardFluxoHtml("reparo_externo", t("fluxoReparoEnviado"), re.balanco.saida_externa, [
+        [t("fluxoReparoVoltou"), re.balanco.entrada_externa],
+        [t("fluxoReparoAberto"), abertos]
+      ], re.lancamentos));
+    }
+    return cards.join("");
+  }
+
   function unidadesTexto(n) {
     return t(Math.abs(n) === 1 ? "unidadeSingular" : "unidadePlural");
   }
@@ -2936,7 +3189,7 @@
       nota: semTransferencia ? "" : t("kpiSaidaNota")
     }));
 
-    if (abaAtual === "" || abaAtual === "saida_armazem") {
+    if (abaAtual === "saida_armazem") {
       var subPedidos = abaAtual === "" && (d.montado || d.caixa)
         ? t("montagemCaixa") + " <strong>" + d.caixa + "</strong> &middot; " + t("montagemMontado") + " <strong>" + d.montado + "</strong>"
         : "";
@@ -2987,7 +3240,7 @@
     if (abaAtual !== "reparo_externo") {
       itens.push('<span class="' + (d.recusas ? "texto-aviso" : "") + '">' + t("secRecusas") + " <strong>" + d.recusas + "</strong></span>");
     }
-    if (abaAtual === "" || abaAtual === "sac") {
+    if (abaAtual === "sac") {
       itens.push("<span>" + t("secVendasSac") + " <strong>" + formatarMoeda(d.vendasCentavos) + "</strong></span>");
       itens.push("<span>" + t("secGarantiasSac") + " <strong>" + formatarMoeda(d.garantiaCentavos) + "</strong></span>");
     }
@@ -3037,19 +3290,33 @@
   // Entrou x saiu de fora por dia - duas barras por dia na mesma escala. So
   // aparece com mais de um dia no periodo (com um dia so repete os numeros
   // principais).
+  var LETRAS_SEMANA = { pt: ["D", "S", "T", "Q", "Q", "S", "S"], zh: ["日", "一", "二", "三", "四", "五", "六"] };
+
   function construirGraficoDias(d) {
     var dias = Object.keys(d.porDia).sort();
     if (dias.length < 2) return "";
-    var max = 1;
-    dias.forEach(function (dia) { max = Math.max(max, d.porDia[dia].entrada, d.porDia[dia].saida); });
-    return dias.map(function (dia) {
+    var maxSaida = 1, maxEntrada = 0;
+    dias.forEach(function (dia) {
+      maxSaida = Math.max(maxSaida, d.porDia[dia].saida);
+      maxEntrada = Math.max(maxEntrada, d.porDia[dia].entrada);
+    });
+    var escala = maxEntrada > maxSaida * 2 ? maxSaida : Math.max(maxSaida, maxEntrada);
+    var letras = LETRAS_SEMANA[idiomaAtual] || LETRAS_SEMANA.pt;
+    var mostrarValores = dias.length <= 12;
+    var barra = function (valor, classe, rotulo) {
+      var cortada = valor > escala;
+      var altura = Math.max(0, Math.round((Math.min(valor, escala) / escala) * 100));
+      var mostrar = cortada || (mostrarValores && valor > 0);
+      return '<span class="bv ' + classe + (cortada ? " cortada" : "") + '" style="height:' + altura + '%" title="' + rotulo + ": " + valor + '">' +
+        (mostrar ? '<span class="bv-valor">' + valor + "</span>" : "") + "</span>";
+    };
+    return '<div class="dias-colunas">' + dias.map(function (dia) {
       var v = d.porDia[dia];
-      return '<div class="dia-linha"><span class="rotulo-barra">' + formatarData(dia) + "</span>" +
-        '<div class="dia-barras">' +
-        '<div class="barra-par"><span class="barra-cor barra-saida" style="width:' + Math.max(0, Math.round((v.saida / max) * 100)) + '%"></span><span class="valor-barra">' + v.saida + "</span></div>" +
-        '<div class="barra-par"><span class="barra-cor barra-entrada" style="width:' + Math.max(0, Math.round((v.entrada / max) * 100)) + '%"></span><span class="valor-barra">' + v.entrada + "</span></div>" +
-        "</div></div>";
-    }).join("");
+      var semana = new Date(dia + "T12:00:00").getDay();
+      return '<div class="dia-col" title="' + formatarData(dia) + '">' +
+        '<div class="dia-col-barras">' + barra(v.saida, "barra-saida", t("legendaSaida")) + barra(v.entrada, "barra-entrada", t("legendaEntrada")) + "</div>" +
+        '<span class="dia-col-rotulo' + (semana === 0 || semana === 6 ? " fim-de-semana" : "") + '">' + dia.slice(8, 10) + "<br>" + letras[semana] + "</span></div>";
+    }).join("") + "</div>";
   }
 
   // "29/09/2026 · A4" - o que o resumo esta somando, sem precisar olhar os filtros.
@@ -3069,6 +3336,10 @@
     var d = calcularInsights(filtrados, acharOriginal);
     document.getElementById("periodo-resumo").textContent = textoPeriodoResumo();
     document.getElementById("grade-kpis").innerHTML = construirKpis(d, comparacaoInsights, pendentes);
+    var cardsFluxo = abaAtual === "" ? construirCardsFluxo(d) : "";
+    document.getElementById("grade-fluxos").innerHTML = cardsFluxo;
+    document.getElementById("grade-fluxos").classList.toggle("escondido", !cardsFluxo);
+    document.getElementById("grade-fluxos-titulo").classList.toggle("escondido", !cardsFluxo);
     document.getElementById("faixa-secundaria").innerHTML = construirFaixaSecundaria(d);
     document.getElementById("tabela-balanco").innerHTML = construirBalanco(d);
 
@@ -3085,6 +3356,8 @@
     });
     renderizarSac(filtrados, acharOriginal);
     renderizarErros(filtrados, acharOriginal);
+    renderizarAtencao();
+    aplicarSubaba();
   }
 
   // `corPara` e opcional - sem ele todas as barras ficam verdes.
@@ -3240,7 +3513,7 @@
   // estado "selecionado", entao nao dava pra saber o que estava aplicado
   // sem olhar os dois campos de data.
   function atualizarEstadoAtalhos(filtros) {
-    document.querySelectorAll(".atalho").forEach(function (botao) {
+    document.querySelectorAll(".atalho[data-periodo]").forEach(function (botao) {
       var intervalo = intervaloDoAtalho(botao.getAttribute("data-periodo"));
       var ativo = filtros.dataInicio === intervalo.dataInicio && filtros.dataFim === intervalo.dataFim;
       botao.classList.toggle("ativo", ativo);
@@ -3306,7 +3579,32 @@
     });
     document.getElementById("filtro-busca").addEventListener("input", reaplicarBusca);
 
-    document.querySelectorAll(".atalho").forEach(function (botao) {
+    document.querySelectorAll(".subaba").forEach(function (botao) {
+      botao.addEventListener("click", function () { selecionarSubaba(botao.getAttribute("data-subaba")); });
+    });
+    document.getElementById("botao-mais-filtros").addEventListener("click", function () {
+      mostrarMaisFiltros(document.getElementById("filtros-refinar").classList.contains("escondido"));
+    });
+    ["filtro-pedido", "filtro-responsavel", "filtro-tipo", "filtro-situacao", "filtro-busca"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener(el.tagName === "SELECT" ? "change" : "input", atualizarBotaoMaisFiltros);
+    });
+    document.getElementById("grade-fluxos").addEventListener("click", function (ev) {
+      var card = ev.target.closest("[data-abrir-fluxo]");
+      if (card) selecionarAba(card.getAttribute("data-abrir-fluxo"));
+    });
+    document.getElementById("atencao-itens").addEventListener("click", function (ev) {
+      var chip = ev.target.closest("button");
+      if (!chip) return;
+      if (chip.getAttribute("data-ir-subaba")) {
+        selecionarSubaba(chip.getAttribute("data-ir-subaba"));
+        document.getElementById("cartao-insights").scrollIntoView({ behavior: "smooth" });
+      } else if (chip.getAttribute("data-ir")) {
+        document.getElementById(chip.getAttribute("data-ir")).scrollIntoView({ behavior: "smooth" });
+      }
+    });
+
+    document.querySelectorAll(".atalho[data-periodo]").forEach(function (botao) {
       botao.addEventListener("click", function () {
         var intervalo = intervaloDoAtalho(botao.getAttribute("data-periodo"));
         document.getElementById("filtro-data-inicio").value = intervalo.dataInicio;
