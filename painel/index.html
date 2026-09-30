@@ -537,6 +537,21 @@
   button.subaba:hover { color: var(--texto); background: none; }
   button.subaba.ativa { color: var(--verde); border-bottom-color: var(--verde); }
   .subaba-oculta { display: none !important; }
+  .cabecalho-acoes { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .cabecalho-acoes button.secundario { padding: 5px 12px; font-size: 0.8rem; }
+  /* Mapa de calor dia da semana x hora */
+  .mapa-calor { border-collapse: separate; border-spacing: 2px; font-size: 0.72rem; font-variant-numeric: tabular-nums; }
+  .mapa-calor th { color: var(--texto-suave); font-weight: 600; padding: 2px 4px; }
+  .mapas-calor { display: grid; gap: 16px; }
+  .mapa-calor th { white-space: nowrap; }
+  .mapa-calor td.celula { min-width: 34px; height: 24px; text-align: center; border-radius: 3px; color: var(--texto);
+    background: color-mix(in srgb, var(--azul) calc(var(--i) * 85%), var(--bg)); }
+  .mapa-calor td.celula.forte { color: white; font-weight: 700; }
+  .mapa-calor td.total { padding-left: 8px; text-align: right; font-weight: 700; white-space: nowrap; min-width: 80px; }
+  .mapa-calor .divisao { display: block; font-size: 0.66rem; font-weight: 500; color: var(--texto-suave); }
+  .mapa-calor th, .mapa-calor td { vertical-align: middle; }
+  .mapa-calor-titulo { font-weight: 800; margin: 0 0 6px; }
+  .mapa-calor-scroll { overflow-x: auto; }
   /* Faixa de atencao (sincronizacao + pendencias) */
   .atencao-itens { display: flex; flex-wrap: wrap; gap: 8px; }
   button.chip-atencao { background: var(--cartao); color: var(--texto); border: 1px solid var(--borda); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: 0.8rem; cursor: pointer; }
@@ -806,7 +821,10 @@
     <section class="cartao" id="cartao-insights">
       <div class="cartao-cabecalho">
         <h3 data-i18n="cartaoInsightsTitulo">Resumo do periodo</h3>
-        <span id="periodo-resumo" class="periodo-resumo"></span>
+        <span class="cabecalho-acoes">
+          <span id="periodo-resumo" class="periodo-resumo"></span>
+          <button type="button" id="botao-relatorio" class="secundario" data-i18n="botaoRelatorio">Relatorio (XLSX)</button>
+        </span>
       </div>
       <p class="subtitulo-cartao" data-i18n="cartaoInsightsSubtitulo">Em unidades, ja descontando estornos. Transferencia entre A4 e B2 e movimento interno: aparece so no bloco dela, nunca como entrada ou saida da empresa.</p>
       <p id="aviso-truncado" class="aviso-truncado escondido">
@@ -817,6 +835,7 @@
         <button type="button" class="subaba" data-subaba="geral" role="tab" data-i18n="subabaGeral">Visao geral</button>
         <button type="button" class="subaba" data-subaba="sac" role="tab" data-i18n="subabaSac">SAC e valores</button>
         <button type="button" class="subaba" data-subaba="erros" role="tab" data-i18n="subabaErros">Erros e correcoes</button>
+        <button type="button" class="subaba" data-subaba="operacao" role="tab" data-i18n="subabaOperacao">Operacao</button>
       </nav>
       <div data-painel-subaba="geral">
       <div id="grade-kpis" class="grade-kpis"></div>
@@ -883,6 +902,23 @@
         </div>
         <p class="nota-sac" data-i18n="errosNota">Estorno conta para quem fez o lancamento original; recusa conta para quem enviou. Taxa = estornos / lancamentos do grupo. Causas agrupadas por palavras do texto da justificativa (passe o mouse para ver os textos). E para achar o processo que gera erro, nao para comparar pessoas: quem lanca mais tambem tem mais chance de errar.</p>
       </div>
+      </div>
+      <div data-painel-subaba="operacao">
+        <div class="grafico-bloco">
+          <h4 data-i18n="calorTitulo">Lancamentos por dia da semana e hora</h4>
+          <p class="nota-sac" data-i18n="calorNota">Cada quadrado soma os lancamentos do periodo naquele dia da semana e hora (passe o mouse para ver as unidades). Mais escuro = mais movimento. Mostra os picos para alocar gente.</p>
+          <div id="mapas-calor" class="mapas-calor"></div>
+        </div>
+        <div class="graficos-lado">
+          <div class="grafico-bloco">
+            <h4 data-i18n="gargaloTransfTitulo">Tempo ate confirmar transferencia</h4>
+            <div id="gargalo-transferencias"></div>
+          </div>
+          <div class="grafico-bloco">
+            <h4 data-i18n="gargaloReparoTitulo">Reparo externo</h4>
+            <div id="gargalo-reparos"></div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1148,6 +1184,34 @@
       legendaSaida: "Saiu para fora",
       legendaEntrada: "Entrou de fora",
       graficoCategoriasTitulo: "O que saiu para fora, por categoria",
+      botaoRelatorio: "Relatorio (XLSX)",
+      relatorioCarregando: "Gerando...",
+      relatorioErro: "Nao foi possivel gerar o relatorio (sem internet para carregar o gerador?).",
+      subabaOperacao: "Operacao",
+      calorTitulo: "Lancamentos por dia da semana e hora",
+      calorNota: "Cada quadrado soma os lancamentos do periodo naquele dia da semana e hora (passe o mouse para ver as unidades). Mais escuro = mais movimento. Mostra os picos para alocar gente.",
+      calorTotal: "Total",
+      calorFora: "fora",
+      calorForaTitulo: "Lancamentos fora do horario habitual (horas com menos de 1% do movimento)",
+      calorMediaDia: "media/dia",
+      calorUnidades: "unidades",
+      gargaloTransfTitulo: "Tempo ate confirmar transferencia",
+      gargaloReparoTitulo: "Reparo externo",
+      gargaloRota: "Rota",
+      gargaloConfirmadas: "Confirmadas",
+      gargaloMediana: "Tempo tipico",
+      gargaloMesmoDia: "No mesmo dia",
+      gargaloMaior: "Mais demorada",
+      gargaloLentas: "Mais de 1 dia para confirmar",
+      gargaloSemTransf: "Nenhuma transferencia confirmada no periodo.",
+      gargaloRetornos: "Voltaram no periodo",
+      gargaloMediaDias: "Tempo medio no tecnico",
+      gargaloAbertos: "Em aberto agora",
+      gargaloParados: "Parados ha mais de 7 dias",
+      gargaloSemReparo: "Nenhum reparo externo no periodo.",
+      unidadeMin: "min",
+      unidadeHora: "h",
+      unidadeDia: "d",
       maisFiltros: "Mais filtros",
       subabaGeral: "Visao geral",
       subabaSac: "SAC e valores",
@@ -1171,7 +1235,7 @@
       sacTitulo: "SAC - vendas x garantias",
       sacGarantiasItemTitulo: "Garantias por item",
       sacVendasItemTitulo: "Vendas por item",
-      sacNota: "Mesmas regras dos totais acima (estorno desconta). O valor e gravado por lancamento: por item ele e estimado (~), dividido entre os itens do lancamento pela quantidade. \"Sem valor\" sao garantias gravadas antes de o valor ser obrigatorio.",
+      sacNota: "Mesmas regras dos totais acima (estorno desconta). Quantidade e exata. Valor por item: exato quando o item foi lancado sozinho; com ~ quando veio de lancamento com varios itens - ai o valor e dividido pelo preco de referencia de cada peca (mediana dos lancamentos em que ela aparece sozinha) ou, sem referencia, pela quantidade. \"Sem valor\" sao garantias gravadas antes de o valor ser obrigatorio (08/09).",
       sacMes: "Mes",
       sacVendas: "Vendas",
       sacGarantias: "Garantias",
@@ -1181,7 +1245,9 @@
       sacTotal: "Total",
       sacItem: "Item",
       sacQtd: "Qtd",
-      sacValorItem: "~Valor",
+      sacValorItem: "Valor",
+      sacValorEstimadoTitulo: "Estimado (~): parte do valor veio de lancamentos com varios itens, dividido pelo preco de referencia de cada peca (ou pela quantidade, quando falta referencia).",
+      sacValorExatoTitulo: "Exato: so lancamentos com este item sozinho.",
       sacSemDescricao: "(sem descricao)",
       errosTitulo: "Erros e correcoes",
       errosPorTipoTitulo: "Por armazem e tipo de lancamento",
@@ -1359,6 +1425,34 @@
       legendaSaida: "对外出库",
       legendaEntrada: "外部入库",
       graficoCategoriasTitulo: "对外出库（按类别）",
+      botaoRelatorio: "报表 (XLSX)",
+      relatorioCarregando: "生成中...",
+      relatorioErro: "无法生成报表（无法联网加载生成器？）。",
+      subabaOperacao: "运营",
+      calorTitulo: "按星期和小时的记录数",
+      calorNota: "每格为该时段内该星期几、该小时的记录总数（悬停可查看件数）。颜色越深 = 越忙。用于安排人手。",
+      calorTotal: "合计",
+      calorFora: "其他",
+      calorForaTitulo: "非常规时段的记录（占比低于1%的小时）",
+      calorMediaDia: "日均",
+      calorUnidades: "件",
+      gargaloTransfTitulo: "调拨确认耗时",
+      gargaloReparoTitulo: "外部维修",
+      gargaloRota: "路线",
+      gargaloConfirmadas: "已确认",
+      gargaloMediana: "典型耗时",
+      gargaloMesmoDia: "当天确认",
+      gargaloMaior: "最长",
+      gargaloLentas: "超过1天才确认",
+      gargaloSemTransf: "该时段没有已确认的调拨。",
+      gargaloRetornos: "本期返回",
+      gargaloMediaDias: "平均维修时长",
+      gargaloAbertos: "当前未结",
+      gargaloParados: "超过7天未返回",
+      gargaloSemReparo: "该时段没有外部维修。",
+      unidadeMin: "分",
+      unidadeHora: "时",
+      unidadeDia: "天",
       maisFiltros: "更多筛选",
       subabaGeral: "总览",
       subabaSac: "客服与金额",
@@ -1382,7 +1476,7 @@
       sacTitulo: "客服 - 销售与保修",
       sacGarantiasItemTitulo: "保修（按商品）",
       sacVendasItemTitulo: "销售（按商品）",
-      sacNota: "与上方合计规则相同（冲销已扣除）。金额按记录保存：按商品的金额为估算值（~），按数量分摊到该记录的各商品。“无金额”是金额成为必填之前登记的保修记录。",
+      sacNota: "与上方合计规则相同（冲销已扣除）。数量为精确值。按商品金额：单独登记时为精确值；带 ~ 表示来自多商品记录，按各零件参考价（其单独登记时的中位数）分摊，缺少参考价时按数量。“无金额”是金额成为必填之前（09/08）登记的保修记录。",
       sacMes: "月份",
       sacVendas: "销售",
       sacGarantias: "保修",
@@ -1392,7 +1486,9 @@
       sacTotal: "合计",
       sacItem: "商品",
       sacQtd: "数量",
-      sacValorItem: "~金额",
+      sacValorItem: "金额",
+      sacValorEstimadoTitulo: "估算（~）：部分金额来自多商品记录，按各零件参考价分摊（缺少参考价时按数量）。",
+      sacValorExatoTitulo: "精确：仅来自只含该商品的记录。",
       sacSemDescricao: "（无描述）",
       errosTitulo: "错误与更正",
       errosPorTipoTitulo: "按仓库和记录类型",
@@ -2673,8 +2769,33 @@
     return (texto || "").trim().replace(/\s+/g, " ").toUpperCase();
   }
 
+  // Preco de referencia por peca = mediana do valor unitario nos lancamentos
+  // de SAC com UM item so (ali o valor e exato). Serve pra dividir o valor de
+  // um lancamento com varios itens de forma realista: 1 motor + 1 pisca nao
+  // valem o mesmo. Mediana, e nao media, pra uma cortesia de R$ 1 nao puxar.
+  function precosDeReferencia(filtrados, acharOriginal) {
+    var unitarios = {};
+    filtrados.forEach(function (m) {
+      if (m.fluxo !== "sac" || m.estornado_de != null) return;
+      if (!m.valor_centavos || !m.itens || m.itens.length !== 1) return;
+      if (m.motivo !== "venda" && m.motivo !== "garantia") return;
+      var it = m.itens[0];
+      var chave = normalizarDescricao(it.descricao);
+      if (!chave || !it.quantidade) return;
+      (unitarios[chave] || (unitarios[chave] = [])).push(m.valor_centavos / it.quantidade);
+    });
+    var ref = {};
+    Object.keys(unitarios).forEach(function (chave) {
+      var v = unitarios[chave].sort(function (a, b) { return a - b; });
+      var meio = Math.floor(v.length / 2);
+      ref[chave] = v.length % 2 ? v[meio] : (v[meio - 1] + v[meio]) / 2;
+    });
+    return ref;
+  }
+
   function calcularSac(filtrados, acharOriginal) {
     var r = { porMes: {}, garantiaPorItem: {}, vendaPorItem: {}, temDados: false };
+    var referencia = precosDeReferencia(filtrados, acharOriginal);
     filtrados.forEach(function (m) {
       if (m.fluxo !== "sac") return;
       var c = classificarMovimento(m, acharOriginal);
@@ -2693,15 +2814,26 @@
       else linha.semValor += c.sinal;
 
       var itens = (base.itens && base.itens.length ? base.itens : m.itens) || [];
-      var qtdTotal = itens.reduce(function (s, it) { return s + (it.quantidade || 0); }, 0);
+      // Um item: valor exato. Varios: pelo preco de referencia de cada peca
+      // quando TODAS tem referencia; senao, pela quantidade. Os dois ultimos
+      // casos marcam a linha como estimada (~).
+      var todosComReferencia = itens.every(function (it) { return referencia[normalizarDescricao(it.descricao)]; });
+      var peso = function (it) {
+        var q = it.quantidade || 0;
+        return todosComReferencia ? q * referencia[normalizarDescricao(it.descricao)] : q;
+      };
+      var pesoTotal = itens.reduce(function (s, it) { return s + peso(it); }, 0);
       var destino = ehVenda ? r.vendaPorItem : r.garantiaPorItem;
       itens.forEach(function (it) {
         var chave = normalizarDescricao(it.descricao) + "|" + (it.categoria || "");
         var item = destino[chave] || (destino[chave] = {
-          descricao: normalizarDescricao(it.descricao), categoria: it.categoria, qtd: 0, valor: 0
+          descricao: normalizarDescricao(it.descricao), categoria: it.categoria, qtd: 0, valor: 0, estimado: false
         });
         item.qtd += c.sinal * (it.quantidade || 0);
-        if (valor && qtdTotal) item.valor += valor * (it.quantidade || 0) / qtdTotal;
+        if (valor && pesoTotal) {
+          item.valor += valor * peso(it) / pesoTotal;
+          if (itens.length > 1) item.estimado = true;
+        }
       });
     });
     return r;
@@ -2744,7 +2876,8 @@
       itens.map(function (it) {
         return '<tr><td class="item">' + escaparHtml(it.descricao || t("sacSemDescricao")) +
           ' <span class="divisao">' + escaparHtml(rotuloCategoria(it.categoria)) + "</span></td>" +
-          "<td>" + it.qtd + "</td><td>" + formatarMoeda(Math.round(it.valor)) + "</td></tr>";
+          "<td>" + it.qtd + '</td><td title="' + (it.estimado ? t("sacValorEstimadoTitulo") : t("sacValorExatoTitulo")) + '">' +
+          (it.estimado ? "~" : "") + formatarMoeda(Math.round(it.valor)) + "</td></tr>";
       }).join("") + "</table></div>";
   }
 
@@ -2991,6 +3124,256 @@
       chips.push('<button type="button" class="chip-atencao" data-ir="cartao-reparos-abertos">' + t("atencaoReparos") + " <strong>" + reparos + "</strong></button>");
     }
     el.innerHTML = chips.join("") || '<span class="chip-ok">' + t("atencaoTudoEmDia") + "</span>";
+  }
+
+  // ---- Operacao (#57, #58): mapa de calor e gargalos, sobre os movimentos
+  // ja carregados (sem consulta nova). ----
+  var NOMES_SEMANA = { pt: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sab"], zh: ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] };
+
+  function construirMapaCalor(movs, rotulo) {
+    var cel = {}, unid = {}, datasPorDia = {}, horas = {}, dias = {};
+    movs.forEach(function (m) {
+      if (m.estornado_de != null || !m.hora) return;
+      var semana = new Date(m.data + "T12:00:00").getDay();
+      var hora = Number(m.hora.slice(0, 2));
+      var k = semana + ":" + hora;
+      cel[k] = (cel[k] || 0) + 1;
+      unid[k] = (unid[k] || 0) + totalItens(m.itens);
+      horas[hora] = true; dias[semana] = true;
+      (datasPorDia[semana] || (datasPorDia[semana] = {}))[m.data] = true;
+    });
+    // Faixa de horas = das horas com movimento de verdade (>= 1% dos
+    // lancamentos); um lancamento solto de madrugada nao alarga a tabela -
+    // vai para a coluna "fora do horario".
+    var porHora = {}, totalGeral = 0;
+    Object.keys(cel).forEach(function (k) { var h = Number(k.split(":")[1]); porHora[h] = (porHora[h] || 0) + cel[k]; totalGeral += cel[k]; });
+    var listaHoras = Object.keys(porHora).map(Number).filter(function (h) { return porHora[h] >= totalGeral * 0.01; }).sort(function (a, b) { return a - b; });
+    if (!listaHoras.length) return "";
+    var faixa = [];
+    for (var h = listaHoras[0]; h <= listaHoras[listaHoras.length - 1]; h++) faixa.push(h);
+    var foraDaFaixa = function (d) {
+      return Object.keys(cel).filter(function (k) {
+        var p = k.split(":"); return Number(p[0]) === d && faixa.indexOf(Number(p[1])) < 0;
+      }).reduce(function (s, k) { return s + cel[k]; }, 0);
+    };
+    var temFora = [0, 1, 2, 3, 4, 5, 6].some(function (d) { return foraDaFaixa(d) > 0; });
+    var ordemDias = [1, 2, 3, 4, 5, 6, 0].filter(function (d) { return dias[d]; });
+    var max = Math.max.apply(null, Object.keys(cel).map(function (k) { return cel[k]; }));
+    var nomes = NOMES_SEMANA[idiomaAtual] || NOMES_SEMANA.pt;
+    var cab = "<tr><th></th>" + faixa.map(function (h) { return "<th>" + (h < 10 ? "0" : "") + h + "h</th>"; }).join("") +
+      (temFora ? '<th title="' + t("calorForaTitulo") + '">' + t("calorFora") + "</th>" : "") +
+      '<th class="total">' + t("calorTotal") + "</th></tr>";
+    var linhas = ordemDias.map(function (d) {
+      var total = 0;
+      var tds = faixa.map(function (h) {
+        var v = cel[d + ":" + h] || 0; total += v;
+        var i = v ? Math.max(0.12, v / max) : 0;
+        return '<td class="celula' + (i > 0.55 ? " forte" : "") + '" style="--i:' + i.toFixed(2) + '" title="' + nomes[d] + " " + h + "h: " +
+          v + " " + t("secLancamentos").toLowerCase() + ", " + (unid[d + ":" + h] || 0) + " " + t("calorUnidades") + '">' + (v || "") + "</td>";
+      }).join("");
+      var fora = foraDaFaixa(d); total += fora;
+      var nDatas = Object.keys(datasPorDia[d] || {}).length;
+      return "<tr><th>" + nomes[d] + "</th>" + tds + (temFora ? '<td class="celula" style="--i:0">' + (fora || "") + "</td>" : "") + '<td class="total">' + total +
+        (nDatas ? ' <span class="divisao">' + Math.round(total / nDatas) + " " + t("calorMediaDia") + "</span>" : "") + "</td></tr>";
+    }).join("");
+    return '<div><p class="mapa-calor-titulo">' + rotulo + '</p><div class="mapa-calor-scroll"><table class="mapa-calor">' + cab + linhas + "</table></div></div>";
+  }
+
+  function duracaoTexto(minutos) {
+    if (minutos < 60) return Math.max(0, Math.round(minutos)) + " " + t("unidadeMin");
+    if (minutos < 24 * 60) return (Math.round(minutos / 6) / 10).toString().replace(".", ",") + " " + t("unidadeHora");
+    return (Math.round(minutos / 144) / 10).toString().replace(".", ",") + " " + t("unidadeDia");
+  }
+
+  function minutosDe(m) {
+    return Date.parse(m.data + "T" + (m.hora || "00:00") + ":00") / 60000;
+  }
+
+  function calcularOperacao(filtrados) {
+    var porChave = {};
+    filtrados.forEach(function (m) { porChave[m.armazem_codigo + ":" + m.id_origem] = m; });
+    var rotas = {}, lentas = [];
+    filtrados.forEach(function (m) {
+      if (m.estornado_de != null || !m.recebido_de_armazem_codigo || ehRecusaDeRecebimento(m)) return;
+      var envio = porChave[m.recebido_de_armazem_codigo + ":" + m.recebido_de_id_origem];
+      if (!envio) return;
+      var min = minutosDe(m) - minutosDe(envio);
+      var rota = envio.armazem_codigo + " → " + m.armazem_codigo;
+      var r = rotas[rota] || (rotas[rota] = { tempos: [], mesmoDia: 0 });
+      r.tempos.push(min);
+      if (envio.data === m.data) r.mesmoDia += 1;
+      if (min > 24 * 60) lentas.push({ rota: rota, envio: envio, min: min });
+    });
+    // Reparo: saida -> entrada casadas por codigo_componente no mesmo armazem.
+    var saidas = {}, retornos = [];
+    filtrados.filter(function (m) { return m.fluxo === "reparo_externo" && m.estornado_de == null; })
+      .sort(function (a, b) { return minutosDe(a) - minutosDe(b); })
+      .forEach(function (m) {
+        m.itens.forEach(function (it) {
+          var codigo = String(it.codigo_componente || "").trim().toUpperCase();
+          if (!codigo) return;
+          var k = m.armazem_codigo + ":" + codigo;
+          if (m.tipo === "saida") saidas[k] = m;
+          else if (saidas[k]) { retornos.push((minutosDe(m) - minutosDe(saidas[k])) / 1440); delete saidas[k]; }
+        });
+      });
+    lentas.sort(function (a, b) { return b.min - a.min; });
+    return { rotas: rotas, lentas: lentas, retornos: retornos };
+  }
+
+  function mediana(v) {
+    var o = v.slice().sort(function (a, b) { return a - b; });
+    var m = Math.floor(o.length / 2);
+    return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2;
+  }
+
+  function renderizarOperacao(filtrados) {
+    var armazem = document.getElementById("filtro-armazem").value;
+    var codigos = armazem ? [armazem] : CODIGOS_ARMAZENS;
+    document.getElementById("mapas-calor").innerHTML = codigos.map(function (c) {
+      return construirMapaCalor(filtrados.filter(function (m) { return m.armazem_codigo === c; }), c);
+    }).join("") || "<p>" + t("semDadosPeriodo") + "</p>";
+
+    var op = calcularOperacao(filtrados);
+    var rotas = Object.keys(op.rotas).sort();
+    document.getElementById("gargalo-transferencias").innerHTML = rotas.length ? tabelaHtml(
+      [{ texto: t("gargaloRota"), item: true }, { texto: t("gargaloConfirmadas") }, { texto: t("gargaloMediana") },
+        { texto: t("gargaloMesmoDia") }, { texto: t("gargaloMaior") }],
+      rotas.map(function (k) {
+        var r = op.rotas[k];
+        var maior = Math.max.apply(null, r.tempos);
+        return '<tr><td class="item">' + escaparHtml(k) + "</td><td>" + r.tempos.length + "</td><td>" + duracaoTexto(mediana(r.tempos)) +
+          "</td><td>" + taxaTexto(r.mesmoDia, r.tempos.length) + '</td><td class="' + (maior > 1440 ? "negativo" : "") + '">' +
+          duracaoTexto(maior) + "</td></tr>";
+      })
+    ) + (op.lentas.length ? '<p class="nota-sac">' + t("gargaloLentas") + ": " + op.lentas.slice(0, 8).map(function (x) {
+      return escaparHtml(x.rota) + " #" + x.envio.id_origem + " (" + formatarData(x.envio.data) + ", " + duracaoTexto(x.min) + ")";
+    }).join(" · ") + "</p>" : "") : "<p>" + t("gargaloSemTransf") + "</p>";
+
+    var abertos = (ultimosReparosAbertosCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; });
+    var hoje = dataIso(new Date());
+    var parados = abertos.filter(function (x) { return diasEntre(x.data, hoje) > 7; });
+    var media = op.retornos.length ? op.retornos.reduce(function (a, b) { return a + b; }, 0) / op.retornos.length : null;
+    document.getElementById("gargalo-reparos").innerHTML = (op.retornos.length || abertos.length) ? linhasFluxo([
+      [t("gargaloRetornos"), op.retornos.length],
+      media == null ? null : [t("gargaloMediaDias"), duracaoTexto(media * 1440)],
+      [t("gargaloAbertos"), abertos.length],
+      [t("gargaloParados"), parados.length, parados.length ? "negativo" : ""]
+    ]) + (parados.length ? '<p class="nota-sac">' + parados.map(function (x) {
+      return escaparHtml(x.armazem_codigo) + " " + escaparHtml(x.codigo_componente) + " (" + formatarData(x.data) + ", " + diasEntre(x.data, hoje) + " " + t("unidadeDia") + ")";
+    }).join(" · ") + "</p>" : "") : "<p>" + t("gargaloSemReparo") + "</p>";
+  }
+
+  // ---- Relatorio XLSX (#60): mesmos numeros da tela, varias planilhas.
+  // SheetJS 0.18.5 (mesma versao do app) carregado so no clique, do cdnjs,
+  // travado por SRI - o arquivo e identico ao do pacote npm. So escreve
+  // (aoa_to_sheet/writeFile), nunca le arquivo externo. ----
+  var SHEETJS_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  var SHEETJS_SRI = "sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw";
+  var ultimoRelatorio = null;
+
+  function carregarSheetJs() {
+    if (window.XLSX) return Promise.resolve(window.XLSX);
+    return new Promise(function (resolve, reject) {
+      var el = document.createElement("script");
+      el.src = SHEETJS_URL;
+      el.integrity = SHEETJS_SRI;
+      el.crossOrigin = "anonymous";
+      el.onload = function () { if (window.XLSX) resolve(window.XLSX); else reject(new Error("XLSX")); };
+      el.onerror = reject;
+      document.head.appendChild(el);
+    });
+  }
+
+  function reais(centavos) { return Math.round(centavos) / 100; }
+
+  function montarPlanilhas(r) {
+    var d = r.d, sac = r.sac, e = r.erros;
+    var abas = {};
+    abas["Resumo"] = [
+      ["Painel Ecoviva - relatorio", ""], ["Periodo / filtro", r.periodo], ["Gerado em", new Date().toLocaleString("pt-BR")], [],
+      ["Indicador", "Valor"],
+      ["Saiu para fora (unidades)", d.total.saida_externa],
+      ["  Veiculos", d.totalGrupo.veiculo.saida_externa], ["  Pecas", d.totalGrupo.peca.saida_externa],
+      ["Entrou de fora (unidades)", d.total.entrada_externa],
+      ["  Veiculos", d.totalGrupo.veiculo.entrada_externa], ["  Pecas", d.totalGrupo.peca.entrada_externa],
+      ["Transferencias enviadas (un.)", d.total.transf_enviada], ["Transferencias recebidas (un.)", d.total.transf_recebida],
+      ["Pedidos expedidos", d.pedidosExpedidos],
+      ["Lancamentos", d.lancamentos], ["Estornos", d.estornos], ["Recebimentos recusados", d.recusas],
+      ["Vendas SAC (R$)", reais(d.vendasCentavos)], ["Garantias SAC (R$)", reais(d.garantiaCentavos)],
+      ["Vendas - garantias (R$)", reais(d.vendasCentavos - d.garantiaCentavos)], [],
+      ["Unidades liquidas (estorno desconta). Transferencia entre A4 e B2 e interna: nao entra em saiu/entrou de fora."],
+      ["Planilha de referencia, editavel - a fonte oficial e o sistema."]
+    ];
+    abas["Por tipo"] = [["Tipo", "Lancamentos", "Saiu para fora", "Veiculos", "Pecas", "Entrou de fora", "Enviado ao outro armazem", "Recebido do outro armazem"]]
+      .concat(Object.keys(d.porFluxo).map(function (f) {
+        var x = d.porFluxo[f];
+        return [rotuloFluxo(f), x.lancamentos, x.balanco.saida_externa, x.grupo.veiculo.saida_externa, x.grupo.peca.saida_externa,
+          x.balanco.entrada_externa, x.balanco.transf_enviada, x.balanco.transf_recebida];
+      }));
+    abas["Balanco"] = [["Armazem", "Entrou de fora", "Recebido do outro armazem", "Enviado ao outro armazem", "Saiu para fora", "Saiu - veiculos", "Saiu - pecas"]]
+      .concat(Object.keys(d.porArmazem).sort().map(function (a) {
+        var b = d.porArmazem[a], g = d.porArmazemGrupo[a] || novoBalancoPorGrupo();
+        return [a, b.entrada_externa, b.transf_recebida, b.transf_enviada, b.saida_externa, g.veiculo.saida_externa, g.peca.saida_externa];
+      }));
+    abas["Por dia"] = [["Data", "Dia", "Saiu para fora", "Entrou de fora"]].concat(Object.keys(d.porDia).sort().map(function (dia) {
+      return [formatarData(dia), NOMES_SEMANA.pt[new Date(dia + "T12:00:00").getDay()], d.porDia[dia].saida, d.porDia[dia].entrada];
+    }));
+    abas["Categorias"] = [["Categoria", "Saiu para fora"]].concat(Object.keys(d.categoriasSaida).map(function (c) { return [c, d.categoriasSaida[c]]; }));
+    if (sac && sac.temDados) {
+      abas["SAC por mes"] = [["Mes", "Vendas (R$)", "Garantias (R$)", "Vendas - garantias (R$)", "Garantias sem valor"]].concat(Object.keys(sac.porMes).sort().map(function (m) {
+        var l = sac.porMes[m];
+        return [formatarMes(m), reais(l.vendas), reais(l.garantias), reais(l.vendas - l.garantias), l.semValor];
+      }));
+      var itens = [["Tipo", "Item", "Categoria", "Quantidade", "Valor (R$)", "Valor estimado?"]];
+      [["Garantia", sac.garantiaPorItem], ["Venda", sac.vendaPorItem]].forEach(function (par) {
+        Object.keys(par[1]).map(function (k) { return par[1][k]; }).filter(function (it) { return it.qtd > 0; })
+          .sort(function (a, b) { return b.qtd - a.qtd; }).forEach(function (it) {
+            itens.push([par[0], it.descricao || "(sem descricao)", it.categoria || "", it.qtd, reais(it.valor), it.estimado ? "sim" : "nao"]);
+          });
+      });
+      abas["SAC por item"] = itens;
+    }
+    if (e) {
+      abas["Erros"] = [["Armazem", "Tipo", "Lancamentos", "Estornos", "Taxa", "Envios recusados"]].concat(porEstornos(e.porTipo).map(function (g) {
+        return [g.rotulo[0], rotuloFluxo(g.rotulo[1]), g.lancamentos, g.estornos, taxaTexto(g.estornos, g.lancamentos), g.recusas];
+      }));
+      abas["Causas"] = [["Causa", "Estornos", "Envios recusados"]].concat(Object.keys(e.causas).map(function (k) {
+        return [t(k), e.causas[k].estornos, e.causas[k].recusas];
+      }));
+      abas["Recusas"] = [["Data", "Enviou", "Recusou", "Lancamento", "Motivo", "Situacao"]].concat(e.recusas.map(function (x) {
+        return [formatarData(x.data), x.enviou, x.recusou, x.idEnvio, x.motivo,
+          x.diasAberta != null ? "SEM ESTORNO ha " + x.diasAberta + " dias" : (x.diasCorrecao === 0 ? "estornado no mesmo dia" : "estornado em " + x.diasCorrecao + " dias")];
+      }));
+    }
+    return abas;
+  }
+
+  async function gerarRelatorio() {
+    var botao = document.getElementById("botao-relatorio");
+    if (!ultimoRelatorio) return;
+    var texto = botao.textContent;
+    botao.disabled = true;
+    botao.textContent = t("relatorioCarregando");
+    try {
+      var XLSX = await carregarSheetJs();
+      var wb = XLSX.utils.book_new();
+      var abas = montarPlanilhas(ultimoRelatorio);
+      Object.keys(abas).forEach(function (nome) {
+        var ws = XLSX.utils.aoa_to_sheet(abas[nome]);
+        ws["!cols"] = (abas[nome][0] || []).map(function (_, i) {
+          var larg = abas[nome].reduce(function (m, l) { return Math.max(m, String(l[i] == null ? "" : l[i]).length); }, 8);
+          return { wch: Math.min(60, larg + 2) };
+        });
+        XLSX.utils.book_append_sheet(wb, ws, nome);
+      });
+      XLSX.writeFile(wb, "Relatorio Ecoviva - " + ultimoRelatorio.periodo.replace(/[\/\\:*?"<>|]/g, "-") + ".xlsx");
+    } catch (err) {
+      alert(t("relatorioErro"));
+    } finally {
+      botao.disabled = false;
+      botao.textContent = texto;
+    }
   }
 
   function formatarMoeda(centavos) {
@@ -3356,6 +3739,13 @@
     });
     renderizarSac(filtrados, acharOriginal);
     renderizarErros(filtrados, acharOriginal);
+    renderizarOperacao(filtrados);
+    ultimoRelatorio = {
+      d: d,
+      sac: (abaAtual === "" || abaAtual === "sac") ? calcularSac(filtrados, acharOriginal) : null,
+      erros: calcularErros(filtrados, acharOriginal),
+      periodo: textoPeriodoResumo()
+    };
     renderizarAtencao();
     aplicarSubaba();
   }
@@ -3579,6 +3969,7 @@
     });
     document.getElementById("filtro-busca").addEventListener("input", reaplicarBusca);
 
+    document.getElementById("botao-relatorio").addEventListener("click", gerarRelatorio);
     document.querySelectorAll(".subaba").forEach(function (botao) {
       botao.addEventListener("click", function () { selecionarSubaba(botao.getAttribute("data-subaba")); });
     });
