@@ -502,6 +502,9 @@
   .kpi-unidade { font-size: 0.8rem; font-weight: 600; color: var(--texto-suave); }
   .kpi-sub { font-size: 0.8rem; }
   .kpi-sub strong, .faixa-secundaria strong { font-variant-numeric: tabular-nums; }
+  .kpi-divisao { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.8rem; margin: 2px 0 4px; }
+  .kpi-divisao strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  .tabela-balanco .divisao { display: block; font-size: 0.68rem; font-weight: 400; color: var(--texto-suave); white-space: nowrap; }
   .kpi-nota { font-size: 0.72rem; color: var(--texto-suave); margin-top: auto; padding-top: 4px; }
   .texto-aviso { color: var(--aviso); }
   .texto-erro { color: var(--erro); }
@@ -1008,6 +1011,13 @@
       unidadeSingular: "unidade",
       unidadePlural: "unidades",
       deltaTitulo: "Periodo anterior de mesmo tamanho:",
+      semBase: "sem base",
+      semBaseTitulo: "Sem comparacao: o periodo anterior comeca antes do primeiro dia com dados no sistema,",
+      grupoVeiculos: "Veiculos",
+      grupoPecas: "Pecas",
+      grupoPecasTitulo: "Pecas e itens da categoria Outro",
+      grupoVeiculosCurto: "veic.",
+      grupoPecasCurto: "pecas",
       secLancamentos: "Lancamentos",
       secEstornos: "Estornos",
       secRecusas: "Recebimentos recusados",
@@ -1136,6 +1146,13 @@
       unidadeSingular: "件",
       unidadePlural: "件",
       deltaTitulo: "上一个同长度周期：",
+      semBase: "无对比基准",
+      semBaseTitulo: "上一周期早于系统中第一天有数据的日期：",
+      grupoVeiculos: "车辆",
+      grupoPecas: "零件",
+      grupoPecasTitulo: "零件及“其他”类别",
+      grupoVeiculosCurto: "车辆",
+      grupoPecasCurto: "零件",
       secLancamentos: "记录",
       secEstornos: "冲销",
       secRecusas: "拒收",
@@ -1822,6 +1839,18 @@
   // Lista de responsaveis pro filtro dedicado - buscada uma vez (nao a cada
   // "Atualizar agora"), independente dos filtros ativos, senao o proprio
   // dropdown ia encolhendo conforme voce filtra.
+  // Primeiro dia com dados no Turso - buscado uma vez (1 linha pelo indice de
+  // data). Falha nao impede nada: sem ele a comparacao segue como antes.
+  var primeiroDiaPromise = null;
+  function buscarPrimeiroDia() {
+    if (!primeiroDiaPromise) {
+      primeiroDiaPromise = executarSql("SELECT MIN(data) FROM movimentos_consolidados", [])
+        .then(function (linhas) { return (linhas[0] && linhas[0][0] && linhas[0][0].value) || null; })
+        .catch(function () { primeiroDiaPromise = null; return null; });
+    }
+    return primeiroDiaPromise;
+  }
+
   async function buscarResponsaveis() {
     var linhas = await executarSql(
       "SELECT DISTINCT usuario_nome FROM movimentos_consolidados WHERE usuario_nome IS NOT NULL ORDER BY usuario_nome",
@@ -2281,6 +2310,19 @@
     return { entrada_externa: 0, transf_recebida: 0, transf_enviada: 0, saida_externa: 0 };
   }
 
+  // Veiculo (scooter/triciclo/patinete) x peca (peca/outro): somar 1 scooter
+  // com 1 parafuso no mesmo total esconde o que interessa (#53). Categoria
+  // desconhecida cai em peca, como "outro".
+  var GRUPO_POR_CATEGORIA = { scooter: "veiculo", triciclo: "veiculo", patinete: "veiculo", peca: "peca", outro: "peca" };
+
+  function grupoDaCategoria(categoria) {
+    return GRUPO_POR_CATEGORIA[categoria] || "peca";
+  }
+
+  function novoBalancoPorGrupo() {
+    return { veiculo: novoBalanco(), peca: novoBalanco() };
+  }
+
   // Tudo em UNIDADES liquidas (estorno desconta, ver `classificarMovimento`),
   // separado pela classe do lancamento - nunca soma entrada com saida nem
   // transferencia com saida pra fora (issue #45).
@@ -2290,7 +2332,9 @@
       estornos: 0,
       recusas: 0,
       total: novoBalanco(),
+      totalGrupo: novoBalancoPorGrupo(),
       porArmazem: {},
+      porArmazemGrupo: {},
       porDia: {},
       saidaPorFluxo: {},
       categoriasSaida: {},
@@ -2311,6 +2355,13 @@
       var armazem = r.porArmazem[m.armazem_codigo] || (r.porArmazem[m.armazem_codigo] = novoBalanco());
       armazem[c.classe] += qtd;
       r.total[c.classe] += qtd;
+      var armazemGrupo = r.porArmazemGrupo[m.armazem_codigo] || (r.porArmazemGrupo[m.armazem_codigo] = novoBalancoPorGrupo());
+      m.itens.forEach(function (it) {
+        var g = grupoDaCategoria(it.categoria);
+        var q = c.sinal * (it.quantidade || 0);
+        r.totalGrupo[g][c.classe] += q;
+        armazemGrupo[g][c.classe] += q;
+      });
 
       var dia = r.porDia[m.data] || (r.porDia[m.data] = { entrada: 0, saida: 0 });
       if (c.classe === "entrada_externa") dia.entrada += qtd;
@@ -2370,6 +2421,18 @@
   // `periodoAnterior`) - so nos 2 numeros principais (saiu/entrou de fora).
   // Sem cor semantica de proposito: mais ou menos movimento nao e bom nem mau
   // por si so, e so contexto de tendencia.
+  // `comparacao` pode ser null (sem comparacao), { semBase, primeiroDia }
+  // (periodo anterior antes do primeiro dia com dados - #52: comparar setembro
+  // com os 5 dias de agosto dava +4642%) ou os insights do periodo anterior.
+  function deltaDe(comparacao, classe, atual) {
+    if (!comparacao) return "";
+    if (comparacao.semBase) {
+      return ' <span class="tile-delta" title="' + t("semBaseTitulo") + " " + formatarData(comparacao.primeiroDia) + '">' +
+        t("semBase") + "</span>";
+    }
+    return deltaTexto(atual, comparacao.total[classe]);
+  }
+
   function deltaTexto(atual, anterior) {
     if (anterior == null) return "";
     var titulo = ' title="' + t("deltaTitulo") + " " + anterior + '"';
@@ -2395,9 +2458,28 @@
       '<div class="kpi-rotulo">' + opcoes.rotulo + '</div>' +
       '<div class="kpi-valor">' + opcoes.valor +
       (opcoes.unidade ? ' <span class="kpi-unidade">' + opcoes.unidade + '</span>' : "") + (opcoes.delta || "") + '</div>' +
+      (opcoes.divisao || "") +
       (opcoes.sub ? '<div class="kpi-sub">' + opcoes.sub + '</div>' : "") +
       (opcoes.nota ? '<div class="kpi-nota">' + opcoes.nota + '</div>' : "") +
       '</div>';
+  }
+
+  // "Veiculos 1296 · Pecas 1156" - so quando os dois grupos aparecem (na aba
+  // Montagem, por exemplo, e tudo peca e a divisao so repetiria o total).
+  function temDoisGrupos(porGrupo, classe) {
+    return porGrupo && porGrupo.veiculo[classe] !== 0 && porGrupo.peca[classe] !== 0;
+  }
+
+  function divisaoHtml(porGrupo, classe) {
+    if (!temDoisGrupos(porGrupo, classe)) return "";
+    return '<div class="kpi-divisao"><span>' + t("grupoVeiculos") + " <strong>" + porGrupo.veiculo[classe] + "</strong></span>" +
+      '<span title="' + t("grupoPecasTitulo") + '">' + t("grupoPecas") + " <strong>" + porGrupo.peca[classe] + "</strong></span></div>";
+  }
+
+  function divisaoCelula(porGrupo, classe) {
+    if (!temDoisGrupos(porGrupo, classe)) return "";
+    return '<span class="divisao" title="' + t("grupoPecasTitulo") + '">' + t("grupoVeiculosCurto") + " " + porGrupo.veiculo[classe] +
+      " &middot; " + t("grupoPecasCurto") + " " + porGrupo.peca[classe] + "</span>";
   }
 
   function unidadesTexto(n) {
@@ -2436,7 +2518,8 @@
       rotulo: t(ROTULO_SAIDA_POR_ABA[abaAtual]),
       valor: d.total.saida_externa,
       unidade: unidadesTexto(d.total.saida_externa),
-      delta: comparacao ? deltaTexto(d.total.saida_externa, comparacao.total.saida_externa) : "",
+      delta: deltaDe(comparacao, "saida_externa", d.total.saida_externa),
+      divisao: divisaoHtml(d.totalGrupo, "saida_externa"),
       sub: subSaida,
       nota: semTransferencia ? "" : t("kpiSaidaNota")
     }));
@@ -2459,7 +2542,8 @@
       rotulo: t(abaAtual === "reparo_externo" ? "kpiEntradaReparo" : "kpiEntrada"),
       valor: d.total.entrada_externa,
       unidade: unidadesTexto(d.total.entrada_externa),
-      delta: comparacao ? deltaTexto(d.total.entrada_externa, comparacao.total.entrada_externa) : "",
+      delta: deltaDe(comparacao, "entrada_externa", d.total.entrada_externa),
+      divisao: divisaoHtml(d.totalGrupo, "entrada_externa"),
       nota: semTransferencia ? "" : t("kpiEntradaNota")
     }));
 
@@ -2523,7 +2607,8 @@
       var b = d.porArmazem[codigo];
       return '<tr><th scope="row">' + codigo + "</th>" + colunas.map(function (c) {
         var interna = c.indexOf("transf_") === 0;
-        return '<td class="' + (interna ? "col-interna" : "") + (b[c] ? "" : " zero") + '">' + b[c] + "</td>";
+        return '<td class="' + (interna ? "col-interna" : "") + (b[c] ? "" : " zero") + '">' + b[c] +
+          divisaoCelula(d.porArmazemGrupo[codigo], c) + "</td>";
       }).join("") + "</tr>";
     }).join("");
     if (armazens.length > 1) {
@@ -2531,7 +2616,7 @@
         if (c.indexOf("transf_") === 0) {
           return '<td class="col-interna" title="' + t("balancoInternoTitulo") + '">' + t("balancoInterno") + "</td>";
         }
-        return "<td>" + d.total[c] + "</td>";
+        return "<td>" + d.total[c] + divisaoCelula(d.totalGrupo, c) + "</td>";
       }).join("") + "</tr>";
     }
     return '<div class="balanco-scroll"><table class="tabela-balanco">' + cab + linhas + "</table></div>";
@@ -2640,6 +2725,11 @@
       var filtrosComparacao = compararPeriodo
         ? Object.assign({}, filtros, periodoAnterior(filtros.dataInicio, filtros.dataFim))
         : null;
+      // Periodo anterior comecando antes do primeiro dia com dados: a
+      // comparacao engana e nem e buscada (economiza a consulta no Turso).
+      var primeiroDia = compararPeriodo ? await buscarPrimeiroDia() : null;
+      var semBase = !!(compararPeriodo && primeiroDia && filtrosComparacao.dataInicio < primeiroDia);
+      if (semBase) compararPeriodo = false;
       var chaveComparacao = compararPeriodo ? filtros.dataInicio + ":" + filtros.dataFim : null;
       var cacheValido = compararPeriodo &&
         chaveComparacao === comparacaoCache.chave &&
@@ -2660,7 +2750,7 @@
       var dadosComparacao = resultados[5];
       var comparacaoInsights;
       if (!compararPeriodo) {
-        comparacaoInsights = null;
+        comparacaoInsights = semBase ? { semBase: true, primeiroDia: primeiroDia } : null;
       } else if (cacheValido) {
         comparacaoInsights = comparacaoCache.insights;
       } else {
