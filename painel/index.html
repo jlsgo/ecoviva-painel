@@ -523,6 +523,7 @@
   .tabela-sac td.negativo { color: var(--erro); font-weight: 700; }
   .tabela-sac td.item, .tabela-sac th.item { text-align: left; }
   .nota-sac { font-size: 0.72rem; color: var(--texto-suave); margin: 10px 0 0; }
+  .tabela-sac td.aberta { color: var(--erro); font-weight: 700; }
   .graficos-lado { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
   .legenda { display: flex; gap: 14px; font-size: 0.75rem; color: var(--texto-suave); margin: -4px 0 10px; }
   .legenda-item { display: inline-flex; align-items: center; gap: 5px; }
@@ -786,6 +787,29 @@
           </div>
         </div>
         <p class="nota-sac" data-i18n="sacNota">Mesmas regras dos totais acima (estorno desconta). O valor e gravado por lancamento: por item ele e estimado (~), dividido entre os itens do lancamento pela quantidade. "Sem valor" sao garantias gravadas antes de o valor ser obrigatorio.</p>
+      </div>
+      <div class="grafico-bloco escondido" id="bloco-erros">
+        <h4 data-i18n="errosTitulo">Erros e correcoes</h4>
+        <div id="resumo-erros" class="faixa-secundaria"></div>
+        <div class="graficos-lado">
+          <div class="grafico-bloco">
+            <h4 data-i18n="errosPorTipoTitulo">Por armazem e tipo de lancamento</h4>
+            <div id="tabela-erros-tipo"></div>
+          </div>
+          <div class="grafico-bloco">
+            <h4 data-i18n="errosCausasTitulo">Causas</h4>
+            <div id="tabela-erros-causas"></div>
+          </div>
+        </div>
+        <div class="grafico-bloco">
+          <h4 data-i18n="errosPorResponsavelTitulo">Por responsavel</h4>
+          <div id="tabela-erros-responsavel"></div>
+        </div>
+        <div class="grafico-bloco" id="bloco-erros-recusas">
+          <h4 data-i18n="errosRecusasTitulo">Recebimentos recusados</h4>
+          <div id="tabela-erros-recusas"></div>
+        </div>
+        <p class="nota-sac" data-i18n="errosNota">Estorno conta para quem fez o lancamento original; recusa conta para quem enviou. Taxa = estornos / lancamentos do grupo. Causas agrupadas por palavras do texto da justificativa (passe o mouse para ver os textos). E para achar o processo que gera erro, nao para comparar pessoas: quem lanca mais tambem tem mais chance de errar.</p>
       </div>
     </section>
 
@@ -1066,6 +1090,48 @@
       sacQtd: "Qtd",
       sacValorItem: "~Valor",
       sacSemDescricao: "(sem descricao)",
+      errosTitulo: "Erros e correcoes",
+      errosPorTipoTitulo: "Por armazem e tipo de lancamento",
+      errosCausasTitulo: "Causas",
+      errosPorResponsavelTitulo: "Por responsavel",
+      errosRecusasTitulo: "Recebimentos recusados",
+      errosNota: "Estorno conta para quem fez o lancamento original; recusa conta para quem enviou. Taxa = estornos / lancamentos do grupo. Causas agrupadas por palavras do texto da justificativa (passe o mouse para ver os textos). E para achar o processo que gera erro, nao para comparar pessoas: quem lanca mais tambem tem mais chance de errar.",
+      errosResumoTaxa: "Taxa de estorno",
+      errosResumoTempo: "Tempo medio ate estornar",
+      errosResumoAbertas: "Recusas sem estorno",
+      errosDias: "dias",
+      errosMesmoDia: "no mesmo dia",
+      errosArmazem: "Armazem",
+      errosFluxo: "Tipo",
+      errosResponsavel: "Responsavel",
+      errosLancamentos: "Lancamentos",
+      errosEstornos: "Estornos",
+      errosTaxa: "Taxa",
+      errosRecusasEnviadas: "Envios recusados",
+      errosCausa: "Causa",
+      errosData: "Data",
+      errosRota: "Enviou -> recusou",
+      errosLancamento: "Lancamento",
+      errosMotivo: "Motivo",
+      errosSituacao: "Situacao",
+      errosCorrigidaEm: "estornado em",
+      errosAbertaHa: "SEM ESTORNO ha",
+      errosSemRecusas: "Nenhuma recusa no periodo.",
+      causaQuantidade: "Quantidade errada",
+      causaPedido: "Numero do pedido",
+      causaDuplicado: "Lancado em duplicidade",
+      causaValor: "Valor",
+      causaRetiraSac: "Cliente retira / coleta em outro galpao",
+      causaSistema: "Sistema travou / erro de sistema / teste",
+      causaPecaNaoIdentificada: "Peca nao identificada",
+      causaCliente: "Cliente, razao social ou transportadora",
+      causaVoltou: "Voltou / devolvido",
+      causaLancadoErrado: "Lancamento errado (sem detalhe)",
+      errosCorrigidaMesmoDia: "estornado no mesmo dia",
+      causaNaoChegou: "Nao chegou / ficou no galpao",
+      causaJaEnviado: "Pedido ja enviado / de outro dia",
+      causaItem: "Item, categoria ou motivo",
+      causaOutros: "Outros",
       situacaoBaixa: "Baixa (saida para fora)",
       situacaoEntrada: "Entrada (de fora)",
       situacaoTransfEnviada: "Transferencia enviada",
@@ -1215,6 +1281,48 @@
       sacQtd: "数量",
       sacValorItem: "~金额",
       sacSemDescricao: "（无描述）",
+      errosTitulo: "错误与更正",
+      errosPorTipoTitulo: "按仓库和记录类型",
+      errosCausasTitulo: "原因",
+      errosPorResponsavelTitulo: "按负责人",
+      errosRecusasTitulo: "拒收",
+      errosNota: "冲销计入原记录的登记人；拒收计入发货方。比率 = 冲销 / 该组记录数。原因按冲销说明中的关键词归类（鼠标悬停可查看原文）。用于找出产生错误的流程，而不是比较个人：登记越多，出错机会也越多。",
+      errosResumoTaxa: "冲销率",
+      errosResumoTempo: "平均冲销时间",
+      errosResumoAbertas: "未冲销的拒收",
+      errosDias: "天",
+      errosMesmoDia: "当天",
+      errosArmazem: "仓库",
+      errosFluxo: "类型",
+      errosResponsavel: "负责人",
+      errosLancamentos: "记录",
+      errosEstornos: "冲销",
+      errosTaxa: "比率",
+      errosRecusasEnviadas: "发货被拒收",
+      errosCausa: "原因",
+      errosData: "日期",
+      errosRota: "发货 -> 拒收",
+      errosLancamento: "记录",
+      errosMotivo: "原因",
+      errosSituacao: "状态",
+      errosCorrigidaEm: "已冲销，用时",
+      errosAbertaHa: "未冲销，已",
+      errosSemRecusas: "该时段没有拒收。",
+      causaQuantidade: "数量错误",
+      causaPedido: "订单号",
+      causaDuplicado: "重复登记",
+      causaValor: "金额",
+      causaRetiraSac: "客户自取 / 在另一仓库提货",
+      causaSistema: "系统卡顿 / 系统错误 / 测试",
+      causaPecaNaoIdentificada: "零件无法识别",
+      causaCliente: "客户、公司名称或物流",
+      causaVoltou: "退回",
+      causaLancadoErrado: "登记错误（无说明）",
+      errosCorrigidaMesmoDia: "当天已冲销",
+      causaNaoChegou: "未到货 / 留在仓库",
+      causaJaEnviado: "订单已发 / 其他日期",
+      causaItem: "商品、类别或原因",
+      causaOutros: "其他",
       situacaoBaixa: "出库（对外）",
       situacaoEntrada: "入库（外部）",
       situacaoTransfEnviada: "调拨发出",
@@ -2526,6 +2634,172 @@
     document.getElementById("tabela-sac-vendas").innerHTML = construirTabelaSacItens(sac.vendaPorItem);
   }
 
+  // Erros e correcoes (#56) - sobre os movimentos ja carregados, sem consulta
+  // nova. Estorno conta para o autor do ORIGINAL (quem errou, nao quem
+  // corrigiu); recusa conta para quem ENVIOU. Causa por palavra-chave no texto
+  // livre da justificativa/motivo - heuristica simples e transparente (o
+  // texto original fica no title), a ordem das regras importa.
+  var REGRAS_CAUSA = [
+    { chave: "causaDuplicado", re: /DUPLIC/ },
+    { chave: "causaSistema", re: /SISTEMA|SITEMA|TRAVOU|\bTESTE\b/ },
+    { chave: "causaPecaNaoIdentificada", re: /IDENTIFIC|INDETIFIC|INDENTIFIC/ },
+    { chave: "causaCliente", re: /RAZAO|NOME DO CLIENTE|TRACA|TROCA|TRASPORT|TRANSPORT/ },
+    { chave: "causaRetiraSac", re: /RETIR|NO SAC|ENTREGUE DIRET|COLET|GALPAO B/ },
+    { chave: "causaNaoChegou", re: /NAO RECEB|NAO CHEG|FICOU|NAO VEIO|FALTOU|NAO SAIU|NAO ENTROU/ },
+    { chave: "causaVoltou", re: /VOLTOU|DEVOLVID|ENVIADAS PARA/ },
+    { chave: "causaJaEnviado", re: /JA FOI|JA ENVIAD|FOI DIA|OUTRO DIA/ },
+    { chave: "causaQuantidade", re: /QUANT|QUNT|QTD|QTDE|COMPLETO|APENAS \d/ },
+    { chave: "causaValor", re: /VALOR|PRECO|R\$/ },
+    { chave: "causaPedido", re: /PEDIDO/ },
+    { chave: "causaItem", re: /SCOO?O?TER|CATEGORIA|ITEM|DESCRI|MODELO|VENDA|GARANTIA|DEFEITO|MOTIVO/ },
+    { chave: "causaLancadoErrado", re: /LANCAD|LANCAMENTO|LANCHADO|DIGITA|ABA ERRADA|^ERRO\b/ }
+  ];
+
+  function textoCausa(texto) {
+    return (texto || "").toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+      .replace(/^\s*RECUSADO\s*-\s*/, "").replace(/^\s*ESTORNO DO LANCAMENTO #\d+:\s*/, "").trim();
+  }
+
+  function classificarCausa(texto) {
+    var limpo = textoCausa(texto);
+    for (var i = 0; i < REGRAS_CAUSA.length; i++) {
+      if (REGRAS_CAUSA[i].re.test(limpo)) return REGRAS_CAUSA[i].chave;
+    }
+    return "causaOutros";
+  }
+
+  function diasEntre(dataA, dataB) {
+    return Math.round((Date.parse(dataB + "T00:00:00Z") - Date.parse(dataA + "T00:00:00Z")) / 86400000);
+  }
+
+  function taxaTexto(parte, total) {
+    if (!total) return "-";
+    return String(Math.round((parte / total) * 1000) / 10).replace(".", ",") + "%";
+  }
+
+  function calcularErros(filtrados, acharOriginal) {
+    var porChave = {};
+    var estornoDe = {};
+    filtrados.forEach(function (m) {
+      porChave[m.armazem_codigo + ":" + m.id_origem] = m;
+      if (m.estornado_de != null) estornoDe[m.armazem_codigo + ":" + m.estornado_de] = m;
+    });
+    var r = {
+      lancamentos: 0, estornos: 0, somaDias: 0, comDias: 0, abertas: 0,
+      porTipo: {}, porResponsavel: {}, causas: {}, recusas: []
+    };
+    var grupo = function (mapa, chave, rotulo) {
+      return mapa[chave] || (mapa[chave] = { rotulo: rotulo, lancamentos: 0, estornos: 0, recusas: 0 });
+    };
+    var causa = function (chaveCausa, campo, texto) {
+      var c = r.causas[chaveCausa] || (r.causas[chaveCausa] = { estornos: 0, recusas: 0, textos: {} });
+      c[campo] += 1;
+      var limpo = textoCausa(texto);
+      if (limpo) c.textos[limpo] = (c.textos[limpo] || 0) + 1;
+    };
+    filtrados.forEach(function (m) {
+      if (m.estornado_de == null) {
+        r.lancamentos += 1;
+        grupo(r.porTipo, m.armazem_codigo + "|" + m.fluxo, [m.armazem_codigo, m.fluxo]).lancamentos += 1;
+        grupo(r.porResponsavel, m.usuario_nome || "-", m.usuario_nome || "-").lancamentos += 1;
+        if (ehRecusaDeRecebimento(m)) {
+          var chaveEnvio = m.recebido_de_armazem_codigo + ":" + m.recebido_de_id_origem;
+          var envio = porChave[chaveEnvio];
+          var estorno = estornoDe[chaveEnvio];
+          grupo(r.porTipo, m.recebido_de_armazem_codigo + "|" + m.fluxo, [m.recebido_de_armazem_codigo, m.fluxo]).recusas += 1;
+          if (envio) grupo(r.porResponsavel, envio.usuario_nome || "-", envio.usuario_nome || "-").recusas += 1;
+          causa(classificarCausa(m.observacoes), "recusas", m.observacoes);
+          if (!estorno) r.abertas += 1;
+          r.recusas.push({
+            data: m.data, enviou: m.recebido_de_armazem_codigo, recusou: m.armazem_codigo,
+            idEnvio: m.recebido_de_id_origem, motivo: textoCausa(m.observacoes),
+            diasCorrecao: estorno ? diasEntre(m.data, estorno.data) : null,
+            diasAberta: estorno ? null : diasEntre(m.data, dataIso(new Date()))
+          });
+        }
+        return;
+      }
+      var original = acharOriginal(m);
+      var autor = (original || m).usuario_nome || "-";
+      r.estornos += 1;
+      grupo(r.porTipo, m.armazem_codigo + "|" + m.fluxo, [m.armazem_codigo, m.fluxo]).estornos += 1;
+      grupo(r.porResponsavel, autor, autor).estornos += 1;
+      causa(classificarCausa(m.observacoes), "estornos", m.observacoes);
+      if (original) { r.somaDias += diasEntre(original.data, m.data); r.comDias += 1; }
+    });
+    r.recusas.sort(function (a, b) { return (b.diasAberta != null) - (a.diasAberta != null) || (a.data < b.data ? 1 : -1); });
+    return r;
+  }
+
+  function tabelaHtml(cabecalho, linhas) {
+    return '<div class="balanco-scroll"><table class="tabela-balanco tabela-sac"><tr>' +
+      cabecalho.map(function (c) { return '<th class="' + (c.item ? "item" : "") + '">' + c.texto + "</th>"; }).join("") +
+      "</tr>" + linhas.join("") + "</table></div>";
+  }
+
+  function linhaGrupoHtml(celulasRotulo, g) {
+    return "<tr>" + celulasRotulo.map(function (c) { return '<td class="item">' + escaparHtml(c) + "</td>"; }).join("") +
+      "<td>" + g.lancamentos + '</td><td class="' + (g.estornos ? "" : "zero") + '">' + g.estornos + "</td>" +
+      "<td>" + taxaTexto(g.estornos, g.lancamentos) + '</td><td class="' + (g.recusas ? "" : "zero") + '">' + g.recusas + "</td></tr>";
+  }
+
+  var CAB_NUMEROS = function () {
+    return [{ texto: t("errosLancamentos") }, { texto: t("errosEstornos") }, { texto: t("errosTaxa") }, { texto: t("errosRecusasEnviadas") }];
+  };
+
+  function porEstornos(mapa) {
+    return Object.keys(mapa).map(function (k) { return mapa[k]; })
+      .sort(function (a, b) { return b.estornos - a.estornos || b.recusas - a.recusas || b.lancamentos - a.lancamentos; });
+  }
+
+  function renderizarErros(filtrados, acharOriginal) {
+    var e = calcularErros(filtrados, acharOriginal);
+    var mostrar = e.lancamentos > 0;
+    document.getElementById("bloco-erros").classList.toggle("escondido", !mostrar);
+    if (!mostrar) return;
+    var tempo = e.comDias ? Math.round((e.somaDias / e.comDias) * 10) / 10 : null;
+    document.getElementById("resumo-erros").innerHTML = [
+      "<span>" + t("errosResumoTaxa") + " <strong>" + taxaTexto(e.estornos, e.lancamentos) + "</strong> (" + e.estornos + "/" + e.lancamentos + ")</span>",
+      tempo == null ? "" : "<span>" + t("errosResumoTempo") + " <strong>" +
+        (tempo === 0 ? t("errosMesmoDia") : String(tempo).replace(".", ",") + " " + t("errosDias")) + "</strong></span>",
+      '<span class="' + (e.abertas ? "texto-erro" : "") + '">' + t("errosResumoAbertas") + " <strong>" + e.abertas + "</strong></span>"
+    ].join("");
+
+    document.getElementById("tabela-erros-tipo").innerHTML = tabelaHtml(
+      [{ texto: t("errosArmazem"), item: true }, { texto: t("errosFluxo"), item: true }].concat(CAB_NUMEROS()),
+      porEstornos(e.porTipo).map(function (g) { return linhaGrupoHtml([g.rotulo[0], rotuloFluxo(g.rotulo[1])], g); })
+    );
+    document.getElementById("tabela-erros-responsavel").innerHTML = tabelaHtml(
+      [{ texto: t("errosResponsavel"), item: true }].concat(CAB_NUMEROS()),
+      porEstornos(e.porResponsavel).slice(0, 15).map(function (g) { return linhaGrupoHtml([g.rotulo], g); })
+    );
+    var causas = Object.keys(e.causas).sort(function (a, b) {
+      return (e.causas[b].estornos + e.causas[b].recusas) - (e.causas[a].estornos + e.causas[a].recusas);
+    });
+    document.getElementById("tabela-erros-causas").innerHTML = causas.length ? tabelaHtml(
+      [{ texto: t("errosCausa"), item: true }, { texto: t("errosEstornos") }, { texto: t("errosRecusasEnviadas") }],
+      causas.map(function (k) {
+        var c = e.causas[k];
+        var exemplos = Object.keys(c.textos).sort(function (a, b) { return c.textos[b] - c.textos[a]; }).slice(0, 12)
+          .map(function (txt) { return c.textos[txt] + "x " + txt; }).join("\n");
+        return '<tr><td class="item" title="' + escaparHtml(exemplos) + '">' + t(k) + "</td>" +
+          '<td class="' + (c.estornos ? "" : "zero") + '">' + c.estornos + '</td><td class="' + (c.recusas ? "" : "zero") + '">' + c.recusas + "</td></tr>";
+      })
+    ) : "<p>" + t("semDadosPeriodo") + "</p>";
+    document.getElementById("tabela-erros-recusas").innerHTML = e.recusas.length ? tabelaHtml(
+      [{ texto: t("errosData"), item: true }, { texto: t("errosRota"), item: true }, { texto: t("errosLancamento") },
+        { texto: t("errosMotivo"), item: true }, { texto: t("errosSituacao") }],
+      e.recusas.map(function (x) {
+        var situacao = x.diasAberta != null
+          ? '<td class="aberta">' + t("errosAbertaHa") + " " + x.diasAberta + " " + t("errosDias") + "</td>"
+          : "<td>" + (x.diasCorrecao === 0 ? t("errosCorrigidaMesmoDia") : t("errosCorrigidaEm") + " " + x.diasCorrecao + " " + t("errosDias")) + "</td>";
+        return '<tr><td class="item">' + formatarData(x.data) + '</td><td class="item">' + escaparHtml(x.enviou) + " &rarr; " +
+          escaparHtml(x.recusou) + "</td><td>#" + escaparHtml(String(x.idEnvio)) + '</td><td class="item">' + escaparHtml(x.motivo) +
+          "</td>" + situacao + "</tr>";
+      })
+    ) : "<p>" + t("errosSemRecusas") + "</p>";
+  }
+
   function formatarMoeda(centavos) {
     // pt-BR pra ter separador de milhar (ponto) alem da virgula decimal -
     // e sempre Real (a moeda do sistema), independente do idioma da UI.
@@ -2810,6 +3084,7 @@
       return CORES_CATEGORIA[c];
     });
     renderizarSac(filtrados, acharOriginal);
+    renderizarErros(filtrados, acharOriginal);
   }
 
   // `corPara` e opcional - sem ele todas as barras ficam verdes.
