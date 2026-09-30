@@ -1661,7 +1661,11 @@
       "WHERE fluxo IN ('peca_montagem', 'saida_armazem', 'sac') " +
       "AND tipo = 'saida' " +
       "AND estornado_de IS NULL " +
-      "AND armazem_destino_codigo IS NOT NULL " +
+      // IN com os codigos (e nao IS NOT NULL): e o que faz o SQLite usar o
+      // indice idx_movimentos_consolidados_destino em vez de ler todas as
+      // linhas dos 3 fluxos a cada atualizacao. Mesmo resultado: so existem
+      // esses dois destinos.
+      "AND armazem_destino_codigo IN ('" + CODIGOS_ARMAZENS.join("', '") + "') " +
       "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados x " +
       "  WHERE x.armazem_codigo = m.armazem_codigo AND x.estornado_de = m.id_origem) " +
       "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados c " +
@@ -1760,8 +1764,12 @@
   // visivel quando um armazem esta com sincronizacao atrasada, em vez de so
   // mostrar o dado antigo dele como se fosse atual.
   async function buscarUltimaSincronizacaoPorArmazem() {
-    var sql = "SELECT armazem_codigo, MAX(enviado_em) FROM movimentos_consolidados GROUP BY armazem_codigo";
-    var linhas = await executarSql(sql, []);
+    // Um MAX por armazem (e nao GROUP BY na tabela toda): com o indice
+    // idx_movimentos_consolidados_enviado cada um le 1 linha.
+    var sql = CODIGOS_ARMAZENS.map(function (_, i) {
+      return "SELECT ?" + (i + 1) + ", (SELECT MAX(enviado_em) FROM movimentos_consolidados WHERE armazem_codigo = ?" + (i + 1) + ")";
+    }).join(" UNION ALL ");
+    var linhas = await executarSql(sql, CODIGOS_ARMAZENS);
     var porArmazem = {};
     linhas.forEach(function (linha) {
       var codigo = linha[0] && linha[0].value;
