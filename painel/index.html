@@ -520,6 +520,9 @@
   .tabela-balanco td.zero { color: var(--texto-suave); }
   .tabela-balanco .linha-empresa th, .tabela-balanco .linha-empresa td { font-weight: 800; border-top: 2px solid var(--borda); border-bottom: none; }
   .tabela-balanco .linha-empresa td.col-interna { font-weight: 500; font-style: italic; font-size: 0.75rem; cursor: help; }
+  .tabela-sac td.negativo { color: var(--erro); font-weight: 700; }
+  .tabela-sac td.item, .tabela-sac th.item { text-align: left; }
+  .nota-sac { font-size: 0.72rem; color: var(--texto-suave); margin: 10px 0 0; }
   .graficos-lado { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
   .legenda { display: flex; gap: 14px; font-size: 0.75rem; color: var(--texto-suave); margin: -4px 0 10px; }
   .legenda-item { display: inline-flex; align-items: center; gap: 5px; }
@@ -769,6 +772,21 @@
           <h4 data-i18n="graficoCategoriasTitulo">O que saiu para fora, por categoria</h4>
           <div id="grafico-categorias"></div>
         </div>
+      </div>
+      <div class="grafico-bloco escondido" id="bloco-sac">
+        <h4 data-i18n="sacTitulo">SAC - vendas x garantias</h4>
+        <div id="tabela-sac-meses"></div>
+        <div class="graficos-lado">
+          <div class="grafico-bloco">
+            <h4 data-i18n="sacGarantiasItemTitulo">Garantias por item</h4>
+            <div id="tabela-sac-garantias"></div>
+          </div>
+          <div class="grafico-bloco">
+            <h4 data-i18n="sacVendasItemTitulo">Vendas por item</h4>
+            <div id="tabela-sac-vendas"></div>
+          </div>
+        </div>
+        <p class="nota-sac" data-i18n="sacNota">Mesmas regras dos totais acima (estorno desconta). O valor e gravado por lancamento: por item ele e estimado (~), dividido entre os itens do lancamento pela quantidade. "Sem valor" sao garantias gravadas antes de o valor ser obrigatorio.</p>
       </div>
     </section>
 
@@ -1035,6 +1053,21 @@
       legendaSaida: "Saiu para fora",
       legendaEntrada: "Entrou de fora",
       graficoCategoriasTitulo: "O que saiu para fora, por categoria",
+      sacTitulo: "SAC - vendas x garantias",
+      sacGarantiasItemTitulo: "Garantias por item",
+      sacVendasItemTitulo: "Vendas por item",
+      sacNota: "Mesmas regras dos totais acima (estorno desconta). O valor e gravado por lancamento: por item ele e estimado (~), dividido entre os itens do lancamento pela quantidade. \"Sem valor\" sao garantias gravadas antes de o valor ser obrigatorio.",
+      sacMes: "Mes",
+      sacVendas: "Vendas",
+      sacGarantias: "Garantias",
+      sacSaldo: "Vendas - garantias",
+      sacSemValor: "Garantias sem valor",
+      sacSemValorTitulo: "Lancamentos de garantia sem valor informado - o total de garantias esta subestimado nesses meses.",
+      sacTotal: "Total",
+      sacItem: "Item",
+      sacQtd: "Qtd",
+      sacValorItem: "~Valor",
+      sacSemDescricao: "(sem descricao)",
       situacaoBaixa: "Baixa (saida para fora)",
       situacaoEntrada: "Entrada (de fora)",
       situacaoTransfEnviada: "Transferencia enviada",
@@ -1170,6 +1203,21 @@
       legendaSaida: "对外出库",
       legendaEntrada: "外部入库",
       graficoCategoriasTitulo: "对外出库（按类别）",
+      sacTitulo: "客服 - 销售与保修",
+      sacGarantiasItemTitulo: "保修（按商品）",
+      sacVendasItemTitulo: "销售（按商品）",
+      sacNota: "与上方合计规则相同（冲销已扣除）。金额按记录保存：按商品的金额为估算值（~），按数量分摊到该记录的各商品。“无金额”是金额成为必填之前登记的保修记录。",
+      sacMes: "月份",
+      sacVendas: "销售",
+      sacGarantias: "保修",
+      sacSaldo: "销售 - 保修",
+      sacSemValor: "无金额保修",
+      sacSemValorTitulo: "未填写金额的保修记录 - 这些月份的保修合计偏低。",
+      sacTotal: "合计",
+      sacItem: "商品",
+      sacQtd: "数量",
+      sacValorItem: "~金额",
+      sacSemDescricao: "（无描述）",
       situacaoBaixa: "出库（对外）",
       situacaoEntrada: "入库（外部）",
       situacaoTransfEnviada: "调拨发出",
@@ -2388,6 +2436,99 @@
     return r;
   }
 
+  // SAC mes a mes e por item (#55) - calculado em cima dos movimentos ja
+  // carregados pro periodo, sem consulta nova ao Turso. Mesmas regras de
+  // `calcularInsights` pra venda/garantia, entao os totais batem com a faixa
+  // de cima. Valor e por lancamento: por item vai rateado pela quantidade.
+  function normalizarDescricao(texto) {
+    return (texto || "").trim().replace(/\s+/g, " ").toUpperCase();
+  }
+
+  function calcularSac(filtrados, acharOriginal) {
+    var r = { porMes: {}, garantiaPorItem: {}, vendaPorItem: {}, temDados: false };
+    filtrados.forEach(function (m) {
+      if (m.fluxo !== "sac") return;
+      var c = classificarMovimento(m, acharOriginal);
+      if (c.classe === "recusa") return;
+      var base = c.base;
+      var ehVenda = base.motivo === "venda";
+      var ehGarantia = base.motivo === "garantia" && c.classe === "saida_externa";
+      if (!ehVenda && !ehGarantia) return;
+      var valor = base.valor_centavos ? c.sinal * base.valor_centavos : 0;
+      if (ehVenda && !valor) return;
+      r.temDados = true;
+      var mes = m.data.slice(0, 7);
+      var linha = r.porMes[mes] || (r.porMes[mes] = { vendas: 0, garantias: 0, semValor: 0 });
+      if (ehVenda) linha.vendas += valor;
+      else if (valor) linha.garantias += valor;
+      else linha.semValor += c.sinal;
+
+      var itens = (base.itens && base.itens.length ? base.itens : m.itens) || [];
+      var qtdTotal = itens.reduce(function (s, it) { return s + (it.quantidade || 0); }, 0);
+      var destino = ehVenda ? r.vendaPorItem : r.garantiaPorItem;
+      itens.forEach(function (it) {
+        var chave = normalizarDescricao(it.descricao) + "|" + (it.categoria || "");
+        var item = destino[chave] || (destino[chave] = {
+          descricao: normalizarDescricao(it.descricao), categoria: it.categoria, qtd: 0, valor: 0
+        });
+        item.qtd += c.sinal * (it.quantidade || 0);
+        if (valor && qtdTotal) item.valor += valor * (it.quantidade || 0) / qtdTotal;
+      });
+    });
+    return r;
+  }
+
+  function formatarMes(mes) {
+    return mes.slice(5, 7) + "/" + mes.slice(0, 4);
+  }
+
+  function construirTabelaSacMeses(sac) {
+    var meses = Object.keys(sac.porMes).sort();
+    var linhaHtml = function (rotulo, l, classe) {
+      var saldo = l.vendas - l.garantias;
+      return '<tr' + (classe ? ' class="' + classe + '"' : "") + '><th scope="row">' + rotulo + "</th>" +
+        "<td>" + formatarMoeda(l.vendas) + "</td><td>" + formatarMoeda(l.garantias) + "</td>" +
+        '<td class="' + (saldo < 0 ? "negativo" : "") + '">' + formatarMoeda(saldo) + "</td>" +
+        '<td class="' + (l.semValor ? "" : "zero") + '" title="' + t("sacSemValorTitulo") + '">' + l.semValor + "</td></tr>";
+    };
+    var total = { vendas: 0, garantias: 0, semValor: 0 };
+    var linhas = meses.map(function (mes) {
+      var l = sac.porMes[mes];
+      total.vendas += l.vendas; total.garantias += l.garantias; total.semValor += l.semValor;
+      return linhaHtml(formatarMes(mes), l);
+    }).join("");
+    if (meses.length > 1) linhas += linhaHtml(t("sacTotal"), total, "linha-empresa");
+    return '<div class="balanco-scroll"><table class="tabela-balanco tabela-sac"><tr><th>' + t("sacMes") + "</th><th>" +
+      t("sacVendas") + "</th><th>" + t("sacGarantias") + "</th><th>" + t("sacSaldo") + "</th><th>" + t("sacSemValor") +
+      "</th></tr>" + linhas + "</table></div>";
+  }
+
+  // Top 10 por quantidade (a quantidade e exata; o valor e estimado).
+  function construirTabelaSacItens(porItem) {
+    var itens = Object.keys(porItem).map(function (k) { return porItem[k]; })
+      .filter(function (it) { return it.qtd > 0; })
+      .sort(function (a, b) { return b.qtd - a.qtd || b.valor - a.valor; })
+      .slice(0, 10);
+    if (!itens.length) return "<p>" + t("semDadosPeriodo") + "</p>";
+    return '<div class="balanco-scroll"><table class="tabela-balanco tabela-sac"><tr><th class="item">' + t("sacItem") +
+      "</th><th>" + t("sacQtd") + "</th><th>" + t("sacValorItem") + "</th></tr>" +
+      itens.map(function (it) {
+        return '<tr><td class="item">' + escaparHtml(it.descricao || t("sacSemDescricao")) +
+          ' <span class="divisao">' + escaparHtml(rotuloCategoria(it.categoria)) + "</span></td>" +
+          "<td>" + it.qtd + "</td><td>" + formatarMoeda(Math.round(it.valor)) + "</td></tr>";
+      }).join("") + "</table></div>";
+  }
+
+  function renderizarSac(filtrados, acharOriginal) {
+    var sac = (abaAtual === "" || abaAtual === "sac") ? calcularSac(filtrados, acharOriginal) : null;
+    var mostrar = !!(sac && sac.temDados);
+    document.getElementById("bloco-sac").classList.toggle("escondido", !mostrar);
+    if (!mostrar) return;
+    document.getElementById("tabela-sac-meses").innerHTML = construirTabelaSacMeses(sac);
+    document.getElementById("tabela-sac-garantias").innerHTML = construirTabelaSacItens(sac.garantiaPorItem);
+    document.getElementById("tabela-sac-vendas").innerHTML = construirTabelaSacItens(sac.vendaPorItem);
+  }
+
   function formatarMoeda(centavos) {
     // pt-BR pra ter separador de milhar (ponto) alem da virgula decimal -
     // e sempre Real (a moeda do sistema), independente do idioma da UI.
@@ -2671,6 +2812,7 @@
     renderizarBarras("grafico-categorias", d.categoriasSaida, categorias, rotuloCategoria, function (c) {
       return CORES_CATEGORIA[c];
     });
+    renderizarSac(filtrados, acharOriginal);
   }
 
   // `corPara` e opcional - sem ele todas as barras ficam verdes.
