@@ -919,6 +919,10 @@
             <div id="gargalo-reparos"></div>
           </div>
         </div>
+        <div class="grafico-bloco escondido" id="bloco-sem-fechamento">
+          <h4 data-i18n="semFechamentoTitulo">Dias sem fechamento</h4>
+          <div id="lista-sem-fechamento"></div>
+        </div>
       </div>
     </section>
 
@@ -1185,6 +1189,10 @@
       legendaEntrada: "Entrou de fora",
       graficoCategoriasTitulo: "O que saiu para fora, por categoria",
       botaoRelatorio: "Relatorio (XLSX)",
+      sacCortesias: "Cortesias (un.)",
+      semFechamentoTitulo: "Dias sem fechamento",
+      semFechamentoNenhum: "Todos os dias com lancamento foram fechados.",
+      atencaoSemFechamento: "Dias sem fechamento:",
       relatorioCarregando: "Gerando...",
       relatorioErro: "Nao foi possivel gerar o relatorio (sem internet para carregar o gerador?).",
       subabaOperacao: "Operacao",
@@ -1426,6 +1434,10 @@
       legendaEntrada: "外部入库",
       graficoCategoriasTitulo: "对外出库（按类别）",
       botaoRelatorio: "报表 (XLSX)",
+      sacCortesias: "赠品（件）",
+      semFechamentoTitulo: "未日结的日期",
+      semFechamentoNenhum: "所有有记录的日期均已日结。",
+      atencaoSemFechamento: "未日结天数：",
       relatorioCarregando: "生成中...",
       relatorioErro: "无法生成报表（无法联网加载生成器？）。",
       subabaOperacao: "运营",
@@ -2213,6 +2225,43 @@
     return primeiroDiaPromise;
   }
 
+  // Fechamentos do periodo (#59), da tabela que o app passou a sincronizar na
+  // v5.1.0. null = indisponivel (tabela ainda nao existe no Turso porque os PCs
+  // nao foram atualizados, ou periodo em aberto) - ai o bloco fica escondido
+  // em vez de acusar todo dia como "sem fechamento". Indice por data: le so as
+  // linhas do periodo.
+  async function buscarFechamentosDoPeriodo(filtros) {
+    if (!filtros.dataInicio || !filtros.dataFim) return null;
+    try {
+      var linhas = await executarSql(
+        "SELECT armazem_codigo, fluxo, data FROM fechamentos_consolidados WHERE data >= ?1 AND data <= ?2",
+        [filtros.dataInicio, filtros.dataFim]
+      );
+      var fechados = {};
+      linhas.forEach(function (l) { fechados[l[0].value + "|" + l[1].value + "|" + l[2].value] = true; });
+      return fechados;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Dias com lancamento e sem fechamento, por armazem e tipo. Hoje fica de
+  // fora (o dia ainda nao acabou).
+  function diasSemFechamento(filtrados, fechados) {
+    if (!fechados) return null;
+    var hoje = dataIso(new Date());
+    var porChave = {};
+    filtrados.forEach(function (m) {
+      if (m.data >= hoje) return;
+      var k = m.armazem_codigo + "|" + m.fluxo + "|" + m.data;
+      if (fechados[k]) return;
+      var x = porChave[k] || (porChave[k] = { armazem: m.armazem_codigo, fluxo: m.fluxo, data: m.data, lancamentos: 0 });
+      x.lancamentos += 1;
+    });
+    return Object.keys(porChave).map(function (k) { return porChave[k]; })
+      .sort(function (a, b) { return a.data < b.data ? 1 : a.data > b.data ? -1 : a.armazem.localeCompare(b.armazem); });
+  }
+
   async function buscarResponsaveis() {
     var linhas = await executarSql(
       "SELECT DISTINCT usuario_nome FROM movimentos_consolidados WHERE usuario_nome IS NOT NULL ORDER BY usuario_nome",
@@ -2707,6 +2756,7 @@
       caixa: 0,
       pedidosExpedidos: 0,
       vendasCentavos: 0,
+      cortesias: 0,
       garantiaCentavos: 0
     };
     // Pedido -> unidades liquidas que sairam pra fora. Um pedido com 3 linhas
@@ -2754,6 +2804,7 @@
       // lados (devolucao de venda e peca vendida); garantia com valor so na
       // saida. O estorno desconta o valor do original.
       var valor = c.base.valor_centavos ? c.sinal * c.base.valor_centavos : 0;
+      if (c.base.motivo === "cortesia" && c.classe === "saida_externa") r.cortesias += qtd;
       if (valor && c.base.motivo === "venda") r.vendasCentavos += valor;
       if (valor && c.base.motivo === "garantia" && c.classe === "saida_externa") r.garantiaCentavos += valor;
     });
@@ -2794,7 +2845,7 @@
   }
 
   function calcularSac(filtrados, acharOriginal) {
-    var r = { porMes: {}, garantiaPorItem: {}, vendaPorItem: {}, temDados: false };
+    var r = { porMes: {}, garantiaPorItem: {}, vendaPorItem: {}, temDados: false, cortesias: 0 };
     var referencia = precosDeReferencia(filtrados, acharOriginal);
     filtrados.forEach(function (m) {
       if (m.fluxo !== "sac") return;
@@ -2803,12 +2854,20 @@
       var base = c.base;
       var ehVenda = base.motivo === "venda";
       var ehGarantia = base.motivo === "garantia" && c.classe === "saida_externa";
+      if (base.motivo === "cortesia" && c.classe === "saida_externa") {
+        var mesC = m.data.slice(0, 7);
+        var linhaC = r.porMes[mesC] || (r.porMes[mesC] = { vendas: 0, garantias: 0, semValor: 0, cortesias: 0 });
+        linhaC.cortesias += c.sinal * totalItens((base.itens && base.itens.length ? base.itens : m.itens) || []);
+        r.cortesias += c.sinal * totalItens((base.itens && base.itens.length ? base.itens : m.itens) || []);
+        r.temDados = true;
+        return;
+      }
       if (!ehVenda && !ehGarantia) return;
       var valor = base.valor_centavos ? c.sinal * base.valor_centavos : 0;
       if (ehVenda && !valor) return;
       r.temDados = true;
       var mes = m.data.slice(0, 7);
-      var linha = r.porMes[mes] || (r.porMes[mes] = { vendas: 0, garantias: 0, semValor: 0 });
+      var linha = r.porMes[mes] || (r.porMes[mes] = { vendas: 0, garantias: 0, semValor: 0, cortesias: 0 });
       if (ehVenda) linha.vendas += valor;
       else if (valor) linha.garantias += valor;
       else linha.semValor += c.sinal;
@@ -2850,18 +2909,19 @@
       return '<tr' + (classe ? ' class="' + classe + '"' : "") + '><th scope="row">' + rotulo + "</th>" +
         "<td>" + formatarMoeda(l.vendas) + "</td><td>" + formatarMoeda(l.garantias) + "</td>" +
         '<td class="' + (saldo < 0 ? "negativo" : "") + '">' + formatarMoeda(saldo) + "</td>" +
-        '<td class="' + (l.semValor ? "" : "zero") + '" title="' + t("sacSemValorTitulo") + '">' + l.semValor + "</td></tr>";
+        '<td class="' + (l.semValor ? "" : "zero") + '" title="' + t("sacSemValorTitulo") + '">' + l.semValor + "</td>" +
+        '<td class="' + (l.cortesias ? "" : "zero") + '">' + (l.cortesias || 0) + "</td></tr>";
     };
-    var total = { vendas: 0, garantias: 0, semValor: 0 };
+    var total = { vendas: 0, garantias: 0, semValor: 0, cortesias: 0 };
     var linhas = meses.map(function (mes) {
       var l = sac.porMes[mes];
-      total.vendas += l.vendas; total.garantias += l.garantias; total.semValor += l.semValor;
+      total.vendas += l.vendas; total.garantias += l.garantias; total.semValor += l.semValor; total.cortesias += l.cortesias || 0;
       return linhaHtml(formatarMes(mes), l);
     }).join("");
     if (meses.length > 1) linhas += linhaHtml(t("sacTotal"), total, "linha-empresa");
     return '<div class="balanco-scroll"><table class="tabela-balanco tabela-sac"><tr><th>' + t("sacMes") + "</th><th>" +
       t("sacVendas") + "</th><th>" + t("sacGarantias") + "</th><th>" + t("sacSaldo") + "</th><th>" + t("sacSemValor") +
-      "</th></tr>" + linhas + "</table></div>";
+      "</th><th>" + t("sacCortesias") + "</th></tr>" + linhas + "</table></div>";
   }
 
   // Top 10 por quantidade (a quantidade e exata; o valor e estimado).
@@ -3118,6 +3178,9 @@
     var transf = pendentesNoFiltro(ultimosPendentesCache || []).length;
     if (transf) chips.push('<button type="button" class="chip-atencao aviso" data-ir="cartao-pendentes">' + t("atencaoTransf") + " <strong>" + transf + "</strong></button>");
     if (recusasAbertasNoPeriodo) chips.push('<button type="button" class="chip-atencao alerta" data-ir-subaba="erros">' + t("atencaoRecusas") + " <strong>" + recusasAbertasNoPeriodo + "</strong></button>");
+    if (diasSemFechamentoAtual && diasSemFechamentoAtual.length) {
+      chips.push('<button type="button" class="chip-atencao aviso" data-ir-subaba="operacao">' + t("atencaoSemFechamento") + " <strong>" + diasSemFechamentoAtual.length + "</strong></button>");
+    }
     var armazem = document.getElementById("filtro-armazem").value;
     var reparos = (ultimosReparosAbertosCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; }).length;
     if (reparos && (abaAtual === "" || abaAtual === "reparo_externo")) {
@@ -3227,7 +3290,24 @@
     return o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2;
   }
 
+  var diasSemFechamentoAtual = null;
+
+  function renderizarSemFechamento(filtrados) {
+    diasSemFechamentoAtual = diasSemFechamento(filtrados, (ultimosFiltrados || {}).fechamentos);
+    var bloco = document.getElementById("bloco-sem-fechamento");
+    bloco.classList.toggle("escondido", diasSemFechamentoAtual == null);
+    if (diasSemFechamentoAtual == null) return;
+    document.getElementById("lista-sem-fechamento").innerHTML = diasSemFechamentoAtual.length ? tabelaHtml(
+      [{ texto: t("errosData"), item: true }, { texto: t("errosArmazem"), item: true }, { texto: t("errosFluxo"), item: true }, { texto: t("errosLancamentos") }],
+      diasSemFechamentoAtual.map(function (x) {
+        return '<tr><td class="item">' + formatarData(x.data) + " " + (NOMES_SEMANA[idiomaAtual] || NOMES_SEMANA.pt)[new Date(x.data + "T12:00:00").getDay()] +
+          '</td><td class="item">' + escaparHtml(x.armazem) + '</td><td class="item">' + rotuloFluxo(x.fluxo) + "</td><td>" + x.lancamentos + "</td></tr>";
+      })
+    ) : "<p>" + t("semFechamentoNenhum") + "</p>";
+  }
+
   function renderizarOperacao(filtrados) {
+    renderizarSemFechamento(filtrados);
     var armazem = document.getElementById("filtro-armazem").value;
     var codigos = armazem ? [armazem] : CODIGOS_ARMAZENS;
     document.getElementById("mapas-calor").innerHTML = codigos.map(function (c) {
@@ -3321,9 +3401,9 @@
     }));
     abas["Categorias"] = [["Categoria", "Saiu para fora"]].concat(Object.keys(d.categoriasSaida).map(function (c) { return [c, d.categoriasSaida[c]]; }));
     if (sac && sac.temDados) {
-      abas["SAC por mes"] = [["Mes", "Vendas (R$)", "Garantias (R$)", "Vendas - garantias (R$)", "Garantias sem valor"]].concat(Object.keys(sac.porMes).sort().map(function (m) {
+      abas["SAC por mes"] = [["Mes", "Vendas (R$)", "Garantias (R$)", "Vendas - garantias (R$)", "Garantias sem valor", "Cortesias (un.)"]].concat(Object.keys(sac.porMes).sort().map(function (m) {
         var l = sac.porMes[m];
-        return [formatarMes(m), reais(l.vendas), reais(l.garantias), reais(l.vendas - l.garantias), l.semValor];
+        return [formatarMes(m), reais(l.vendas), reais(l.garantias), reais(l.vendas - l.garantias), l.semValor, l.cortesias || 0];
       }));
       var itens = [["Tipo", "Item", "Categoria", "Quantidade", "Valor (R$)", "Valor estimado?"]];
       [["Garantia", sac.garantiaPorItem], ["Venda", sac.vendaPorItem]].forEach(function (par) {
@@ -3333,6 +3413,11 @@
           });
       });
       abas["SAC por item"] = itens;
+    }
+    if (diasSemFechamentoAtual) {
+      abas["Dias sem fechamento"] = [["Data", "Armazem", "Tipo", "Lancamentos"]].concat(diasSemFechamentoAtual.map(function (x) {
+        return [formatarData(x.data), x.armazem, rotuloFluxo(x.fluxo), x.lancamentos];
+      }));
     }
     if (e) {
       abas["Erros"] = [["Armazem", "Tipo", "Lancamentos", "Estornos", "Taxa", "Envios recusados"]].concat(porEstornos(e.porTipo).map(function (g) {
@@ -3507,7 +3592,8 @@
         [t("fluxoSacDevolucoes"), sac.balanco.entrada_externa],
         [t("secVendasSac"), formatarMoeda(d.vendasCentavos)],
         [t("secGarantiasSac"), formatarMoeda(d.garantiaCentavos)],
-        [t("fluxoSacSaldo"), formatarMoeda(saldo), saldo < 0 ? "negativo" : ""]
+        [t("fluxoSacSaldo"), formatarMoeda(saldo), saldo < 0 ? "negativo" : ""],
+        d.cortesias ? [t("sacCortesias"), d.cortesias] : null
       ], sac.lancamentos));
     }
     var mo = f("peca_montagem");
@@ -3830,7 +3916,8 @@
         buscarUltimaSincronizacaoPorArmazem(),
         buscarContagemPorFluxo(filtros),
         buscarReparosEmAberto(),
-        compararPeriodo && !cacheValido ? buscarMovimentosFiltrados(filtrosComparacao) : Promise.resolve(null)
+        compararPeriodo && !cacheValido ? buscarMovimentosFiltrados(filtrosComparacao) : Promise.resolve(null),
+        buscarFechamentosDoPeriodo(filtros)
       ]);
       var dadosFiltrados = resultados[0];
       var pendentes = resultados[1];
@@ -3867,6 +3954,7 @@
       var referenciasEstorno = await buscarReferenciasEstorno(precisamOriginal);
 
       ultimosFiltrados = {
+        fechamentos: resultados[6],
         movimentos: dadosFiltrados.movimentos,
         truncado: dadosFiltrados.truncado,
         pendentes: pendentes,
