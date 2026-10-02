@@ -349,7 +349,8 @@
      Externo - cada card so aparece onde faz sentido. */
   #conteudo[data-aba-atual="reparo_externo"] #cartao-pendentes { display: none; }
   /* Sem nada pendente o quadro some - a faixa de atencao ja diz "Nada pendente". */
-  #cartao-pendentes.vazio, #cartao-reparos-abertos.vazio { display: none; }
+  #cartao-pendentes.vazio, #cartao-reparos-abertos.vazio, #cartao-assistencias-abertas.vazio { display: none; }
+  #conteudo:not([data-aba-atual="todos"]):not([data-aba-atual="sac"]) #cartao-assistencias-abertas { display: none; }
   #conteudo:not([data-aba-atual="todos"]):not([data-aba-atual="reparo_externo"]) #cartao-reparos-abertos { display: none; }
   th { position: sticky; top: 0; background: var(--cartao); white-space: normal; vertical-align: bottom; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--texto-suave); }
   tbody tr:hover { background: var(--bg); }
@@ -860,6 +861,15 @@
           <div id="grafico-categorias"></div>
         </div>
       </div>
+      <!-- #54: sob demanda (botao), agregado no SQL - nada roda no ciclo de 5 min. -->
+      <div class="grafico-bloco" id="bloco-evolucao">
+        <div class="cartao-cabecalho">
+          <h4 data-i18n="evolucaoTitulo">Evolucao mes a mes (ultimos 12 meses)</h4>
+          <button type="button" id="botao-evolucao" class="secundario" data-i18n="evolucaoBotao">Ver evolucao</button>
+        </div>
+        <p class="subtitulo-cartao" data-i18n="evolucaoNota">Unidades que sairam para fora e que entraram de fora, por categoria, ja descontando estornos. Transferencia entre A4 e B2 nao entra. Respeita o filtro de armazem.</p>
+        <div id="tabela-evolucao"></div>
+      </div>
       </div>
       <div data-painel-subaba="sac">
       <div class="grafico-bloco escondido" id="bloco-sac">
@@ -937,6 +947,13 @@
       <h3 data-i18n="cartaoReparosAbertosTitulo">Reparos externos em aberto</h3>
       <p class="subtitulo-cartao" data-i18n="cartaoReparosAbertosSubtitulo">Pecas que sairam pro tecnico externo e ainda nao voltaram.</p>
       <div id="lista-reparos-abertos" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
+    </div>
+
+    <!-- Assistencia tecnica do SAC (app v5.2.0, #70/#75) - so nas abas Todos/SAC. -->
+    <div class="cartao" id="cartao-assistencias-abertas">
+      <h3 data-i18n="cartaoAssistenciasTitulo">Assistencia tecnica em aberto</h3>
+      <p class="subtitulo-cartao" data-i18n="cartaoAssistenciasSubtitulo">Veiculos que entraram no SAC para assistencia e ainda nao foram entregues.</p>
+      <div id="lista-assistencias-abertas" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
     </div>
 
     <div class="cartao">
@@ -1109,6 +1126,11 @@
       cartaoPendentesTitulo: "Transferencias pendentes de confirmacao",
       cartaoReparosAbertosTitulo: "Reparos externos em aberto",
       cartaoReparosAbertosSubtitulo: "Pecas que sairam pro tecnico externo e ainda nao voltaram.",
+      cartaoAssistenciasTitulo: "Assistencia tecnica em aberto",
+      cartaoAssistenciasSubtitulo: "Veiculos que entraram no SAC para assistencia e ainda nao foram entregues.",
+      assistenciaChamado: "chamado",
+      assistenciaDias: "dias parado",
+      atencaoAssistencias: "Assistencias em aberto:",
       nenhuma: "Nenhuma.",
       cartaoMovimentosTitulo: "Movimentos recentes",
       colArmazem: "Armazem",
@@ -1222,6 +1244,15 @@
       unidadeDia: "d",
       maisFiltros: "Mais filtros",
       subabaGeral: "Visao geral",
+      evolucaoTitulo: "Evolucao mes a mes (ultimos 12 meses)",
+      evolucaoBotao: "Ver evolucao",
+      evolucaoCarregando: "Calculando...",
+      evolucaoNota: "Unidades que sairam para fora e que entraram de fora, por categoria, ja descontando estornos. Transferencia entre A4 e B2 nao entra. Respeita o filtro de armazem.",
+      evolucaoMes: "Mes",
+      evolucaoSaiu: "saiu",
+      evolucaoEntrou: "entrou",
+      evolucaoTotal: "Total",
+      evolucaoVazio: "Sem movimento nesses meses.",
       subabaSac: "SAC e valores",
       subabaErros: "Erros e correcoes",
       gradeFluxosTitulo: "Por tipo de lancamento",
@@ -1354,6 +1385,11 @@
       cartaoPendentesTitulo: "待确认的转运",
       cartaoReparosAbertosTitulo: "在外维修中的物品",
       cartaoReparosAbertosSubtitulo: "已送往外部技术人员、尚未返回的物品。",
+      cartaoAssistenciasTitulo: "未结技术维修（客服）",
+      cartaoAssistenciasSubtitulo: "进入客服技术维修、尚未交还的车辆。",
+      assistenciaChamado: "工单",
+      assistenciaDias: "天未处理",
+      atencaoAssistencias: "未结技术维修：",
       nenhuma: "无。",
       cartaoMovimentosTitulo: "最近的记录",
       colArmazem: "仓库",
@@ -1467,6 +1503,15 @@
       unidadeDia: "天",
       maisFiltros: "更多筛选",
       subabaGeral: "总览",
+      evolucaoTitulo: "逐月变化（最近12个月）",
+      evolucaoBotao: "查看变化",
+      evolucaoCarregando: "计算中...",
+      evolucaoNota: "按类别统计的对外出库和外部入库数量（已扣除冲销）。A4 与 B2 之间的调拨不计入。按仓库筛选。",
+      evolucaoMes: "月份",
+      evolucaoSaiu: "出库",
+      evolucaoEntrou: "入库",
+      evolucaoTotal: "合计",
+      evolucaoVazio: "这些月份没有数据。",
       subabaSac: "客服与金额",
       subabaErros: "错误与更正",
       gradeFluxosTitulo: "按记录类型",
@@ -1597,6 +1642,7 @@
   var ultimaSincPorArmazemCache = {};
   var ultimosPendentesCache = [];
   var ultimosReparosAbertosCache = [];
+  var ultimasAssistenciasAbertasCache = [];
 
   function aplicarTraducoesEstaticas() {
     document.querySelectorAll("[data-i18n]").forEach(function (el) {
@@ -1628,6 +1674,7 @@
       renderizarStatusArmazens(ultimaSincPorArmazemCache);
       renderizarPendentes(ultimosPendentesCache);
       renderizarReparosAbertos(ultimosReparosAbertosCache);
+      renderizarAssistenciasAbertas(ultimasAssistenciasAbertasCache);
       if (ultimosFiltrados && ultimosFiltrados.movimentos) reaplicarBusca();
     }
   }
@@ -1673,6 +1720,11 @@
   // saida_armazem/sac (ver src-tauri/src/domain/movimentos.rs), sem ela a
   // coluna Razao Social do painel ficava sempre vazia mesmo com o dado
   // gravado e sincronizado no Turso.
+  // Armazens fixos do sistema (A4/B2, ver domain::db::mod.rs no app) - lista
+  // curta e conhecida, entao nao precisa de uma consulta separada so pra
+  // descobrir quais existem.
+  var CODIGOS_ARMAZENS = ["A4", "B2"];
+
   var COLUNAS_MOVIMENTO = "armazem_codigo, id_origem, fluxo, tipo, data, hora, usuario_nome, " +
     "numero_pedido, status, estornado_de, itens_json, armazem_destino_codigo, " +
     "recebido_de_armazem_codigo, recebido_de_id_origem, enviado_em, motivo, observacoes, contraparte, " +
@@ -2047,21 +2099,27 @@
   // (...)` tem que ser mantido igual ao allowlist do lado Rust a mao -
   // reparo_externo fica de fora de proposito (nao suporta armazem_destino,
   // so tecnico externo).
+  // Mesma regra de `SQL_PENDENTES_RECEBIMENTO` (src-tauri/src/db/sync.rs) -
+  // o teste testes-painel/consultas.test.ts roda as duas contra o mesmo SQLite e
+  // falha se divergirem (docs/AUDITORIA.md, ARQ-03). Declarada como constante
+  // (`var SQL_... = ...;` numa instrucao so) pro teste conseguir extrair.
+  var SQL_PENDENTES_GLOBAL = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados m " +
+    "WHERE fluxo IN ('peca_montagem', 'saida_armazem', 'sac') " +
+    "AND tipo = 'saida' " +
+    "AND estornado_de IS NULL " +
+    // IN com os codigos (e nao IS NOT NULL): e o que faz o SQLite usar o
+    // indice idx_movimentos_consolidados_destino em vez de ler todas as
+    // linhas dos 3 fluxos a cada atualizacao. Mesmo resultado: so existem
+    // esses dois destinos.
+    "AND armazem_destino_codigo IN ('" + CODIGOS_ARMAZENS.join("', '") + "') " +
+    "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados x " +
+    "  WHERE x.armazem_codigo = m.armazem_codigo AND x.estornado_de = m.id_origem) " +
+    "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados c " +
+    "  WHERE c.recebido_de_armazem_codigo = m.armazem_codigo AND c.recebido_de_id_origem = m.id_origem) " +
+    "ORDER BY data ASC, hora ASC LIMIT 200";
+
   async function buscarPendentesGlobal() {
-    var sql = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados m " +
-      "WHERE fluxo IN ('peca_montagem', 'saida_armazem', 'sac') " +
-      "AND tipo = 'saida' " +
-      "AND estornado_de IS NULL " +
-      // IN com os codigos (e nao IS NOT NULL): e o que faz o SQLite usar o
-      // indice idx_movimentos_consolidados_destino em vez de ler todas as
-      // linhas dos 3 fluxos a cada atualizacao. Mesmo resultado: so existem
-      // esses dois destinos.
-      "AND armazem_destino_codigo IN ('" + CODIGOS_ARMAZENS.join("', '") + "') " +
-      "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados x " +
-      "  WHERE x.armazem_codigo = m.armazem_codigo AND x.estornado_de = m.id_origem) " +
-      "AND NOT EXISTS (SELECT 1 FROM movimentos_consolidados c " +
-      "  WHERE c.recebido_de_armazem_codigo = m.armazem_codigo AND c.recebido_de_id_origem = m.id_origem) " +
-      "ORDER BY data ASC, hora ASC LIMIT 200";
+    var sql = SQL_PENDENTES_GLOBAL;
     var linhas = await executarSql(sql, []);
     return linhas.map(linhaParaMovimento);
   }
@@ -2127,6 +2185,47 @@
     return abertos;
   }
 
+  // Mirror de `domain::movimentos::buscar_assistencias_em_aberto` (app Rust,
+  // #70/#75): entrada sac/assistencia (nem estorno, nem estornada) sem uma
+  // saida sac/assistencia POSTERIOR (id_origem maior, mesmo armazem) com o
+  // mesmo chamado (numero_pedido normalizado), tambem valida. Estornar a saida
+  // reabre o chamado. O estorno nao copia `motivo` (fica NULL), por isso a
+  // consulta traz tambem os estornos do SAC. Uma consulta so, so linhas do
+  // SAC (indice de fluxo), sempre global como os reparos - e um backlog.
+  async function buscarAssistenciasEmAberto() {
+    var sql = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados " +
+      "WHERE fluxo = 'sac' AND (motivo = 'assistencia' OR estornado_de IS NOT NULL)";
+    var movimentos = (await executarSql(sql, [])).map(linhaParaMovimento);
+    var normalizar = function (c) { return String(c || "").trim().toUpperCase(); };
+    var estornados = {};
+    movimentos.forEach(function (m) {
+      if (m.estornado_de != null) estornados[m.armazem_codigo + ":" + m.estornado_de] = true;
+    });
+    var validos = movimentos.filter(function (m) {
+      return m.motivo === "assistencia" && m.estornado_de == null && !estornados[m.armazem_codigo + ":" + m.id_origem];
+    });
+    var saidas = validos.filter(function (m) { return m.tipo === "saida"; });
+    var abertas = validos.filter(function (m) {
+      if (m.tipo !== "entrada" || m.recebido_de_armazem_codigo || !normalizar(m.numero_pedido)) return false;
+      return !saidas.some(function (s) {
+        return s.armazem_codigo === m.armazem_codigo && s.id_origem > m.id_origem &&
+          normalizar(s.numero_pedido) === normalizar(m.numero_pedido);
+      });
+    }).map(function (m) {
+      return {
+        armazem_codigo: m.armazem_codigo,
+        chamado: normalizar(m.numero_pedido),
+        data: m.data,
+        hora: m.hora,
+        contraparte: m.contraparte,
+        observacoes: m.observacoes,
+        itens: m.itens || []
+      };
+    });
+    abertas.sort(function (a, b) { return (a.data + a.hora).localeCompare(b.data + b.hora); });
+    return abertas;
+  }
+
   // Quantos movimentos cada fluxo tem dentro dos filtros ATIVOS, exceto o
   // proprio fluxo (pra alimentar o contador de cada aba - "SAC (12)") -
   // reaproveita `montarFiltroSql` ignorando o campo `fluxo` do filtro
@@ -2144,11 +2243,6 @@
     });
     return porFluxo;
   }
-
-  // Armazens fixos do sistema (A4/B2, ver domain::db::mod.rs no app) - lista
-  // curta e conhecida, entao nao precisa de uma consulta separada so pra
-  // descobrir quais existem.
-  var CODIGOS_ARMAZENS = ["A4", "B2"];
 
   // Ultima vez que cada armazem mandou algo pro Turso, direto da coluna
   // enviado_em (ja em horario local desde o Sprint 1) - usado pra deixar
@@ -2454,6 +2548,29 @@
         (r.contraparte ? " - " + escaparHtml(r.contraparte) : "") + " - " +
         formatarData(r.data) + " " + r.hora +
         (haQuanto ? " (" + haQuanto + ")" : "") + "</p>";
+    }).join("");
+  }
+
+  function renderizarAssistenciasAbertas(abertas) {
+    ultimasAssistenciasAbertasCache = abertas;
+    var armazem = document.getElementById("filtro-armazem").value;
+    var lista = abertas.filter(function (a) { return !armazem || a.armazem_codigo === armazem; });
+    var el = document.getElementById("lista-assistencias-abertas");
+    document.getElementById("cartao-assistencias-abertas").classList.toggle("vazio", lista.length === 0);
+    if (lista.length === 0) {
+      el.innerHTML = "<p>" + t("nenhuma") + "</p>";
+      return;
+    }
+    var hoje = new Date(dataIso(new Date()) + "T12:00:00");
+    el.innerHTML = lista.map(function (a) {
+      var dias = Math.round((hoje - new Date(a.data + "T12:00:00")) / 86400000);
+      var veiculos = a.itens.map(function (it) {
+        return it.quantidade + "x " + rotuloCategoria(it.categoria) + (it.descricao ? " (" + escaparHtml(it.descricao) + ")" : "");
+      }).join(" + ");
+      return '<p><span class="badge ' + (dias > 7 ? "badge-pendente" : "badge-baixa") + '">' + dias + " " + t("assistenciaDias") + "</span> " +
+        a.armazem_codigo + " - " + t("assistenciaChamado") + " " + escaparHtml(a.chamado) + " - " + veiculos +
+        (a.contraparte ? " - " + escaparHtml(a.contraparte) : "") + " - " + formatarData(a.data) + " " + a.hora +
+        (a.observacoes ? " - " + escaparHtml(a.observacoes) : "") + "</p>";
     }).join("");
   }
 
@@ -3053,6 +3170,87 @@
     return r;
   }
 
+  // ---- #54: evolucao mes a mes por categoria e armazem. Agrega no SQL
+  // (json_each sobre itens_json) porque 12 meses passam do LIMITE_LINHAS da
+  // busca normal. Mesma regra do resto do painel (classificarMovimento): um
+  // estorno desconta da classe do ORIGINAL (o estorno nao copia destino/
+  // recebido_de), recusa de recebimento nao conta, transferencia nao e
+  // "saiu/entrou de fora". So roda no clique do botao.
+  var SQL_EVOLUCAO =
+    "SELECT substr(m.data, 1, 7) AS mes, m.armazem_codigo, " +
+    "CASE WHEN COALESCE(o.tipo, m.tipo) = 'saida' " +
+    "THEN CASE WHEN COALESCE(o.armazem_destino_codigo, m.armazem_destino_codigo) IS NULL THEN 'saiu' ELSE 'transf' END " +
+    "ELSE CASE WHEN COALESCE(o.recebido_de_armazem_codigo, m.recebido_de_armazem_codigo) IS NULL THEN 'entrou' ELSE 'transf' END END AS classe, " +
+    "json_extract(j.value, '$.categoria') AS categoria, " +
+    "SUM((CASE WHEN m.estornado_de IS NULL THEN 1 ELSE -1 END) * json_extract(j.value, '$.quantidade')) AS unidades " +
+    "FROM movimentos_consolidados m " +
+    "LEFT JOIN movimentos_consolidados o ON m.estornado_de IS NOT NULL " +
+    "AND o.armazem_codigo = m.armazem_codigo AND o.id_origem = m.estornado_de, " +
+    "json_each(m.itens_json) j " +
+    "WHERE m.data >= ? AND m.data <= ? AND (? = '' OR m.armazem_codigo = ?) " +
+    "AND NOT (COALESCE(o.motivo, m.motivo) = 'recusado' " +
+    "AND COALESCE(o.recebido_de_armazem_codigo, m.recebido_de_armazem_codigo) IS NOT NULL) " +
+    "GROUP BY 1, 2, 3, 4";
+  var CATEGORIAS_EVOLUCAO = ["scooter", "triciclo", "patinete", "peca", "outro"];
+
+  async function mostrarEvolucao() {
+    var botao = document.getElementById("botao-evolucao");
+    var el = document.getElementById("tabela-evolucao");
+    var armazem = document.getElementById("filtro-armazem").value || "";
+    var hoje = dataIso(new Date());
+    var d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 11);
+    var inicio = dataIso(d);
+    botao.disabled = true;
+    botao.textContent = t("evolucaoCarregando");
+    try {
+      var linhas = await executarSql(SQL_EVOLUCAO, [inicio, hoje, armazem, armazem]);
+      var v = function (l, i) { return l[i] && l[i].value !== undefined ? l[i].value : null; };
+      var tabela = {};
+      linhas.forEach(function (l) {
+        var classe = v(l, 2);
+        if (classe === "transf") return;
+        var chave = v(l, 0) + "|" + v(l, 1);
+        var linha = tabela[chave] || (tabela[chave] = { mes: v(l, 0), armazem: v(l, 1), saiu: {}, entrou: {} });
+        var cat = v(l, 3) || "outro";
+        linha[classe][cat] = (linha[classe][cat] || 0) + Number(v(l, 4) || 0);
+      });
+      var chaves = Object.keys(tabela).sort();
+      if (!chaves.length) {
+        el.innerHTML = "<p>" + t("evolucaoVazio") + "</p>";
+        return;
+      }
+      var cats = CATEGORIAS_EVOLUCAO.filter(function (c) {
+        return chaves.some(function (k) { return tabela[k].saiu[c] || tabela[k].entrou[c]; });
+      });
+      var cab = [{ texto: t("evolucaoMes"), item: true }, { texto: t("errosArmazem"), item: true }];
+      cats.forEach(function (c) {
+        cab.push({ texto: rotuloCategoria(c) + " " + t("evolucaoSaiu") });
+        cab.push({ texto: rotuloCategoria(c) + " " + t("evolucaoEntrou") });
+      });
+      cab.push({ texto: t("evolucaoTotal") + " " + t("evolucaoSaiu") });
+      cab.push({ texto: t("evolucaoTotal") + " " + t("evolucaoEntrou") });
+      var celula = function (n) { return '<td class="' + (n ? "" : "zero") + '">' + (n || 0) + "</td>"; };
+      el.innerHTML = tabelaHtml(cab, chaves.map(function (k) {
+        var x = tabela[k];
+        var totS = 0, totE = 0;
+        var tds = cats.map(function (c) {
+          totS += x.saiu[c] || 0;
+          totE += x.entrou[c] || 0;
+          return celula(x.saiu[c]) + celula(x.entrou[c]);
+        }).join("");
+        return '<tr><td class="item">' + formatarMes(x.mes) + '</td><td class="item">' + escaparHtml(x.armazem) + "</td>" +
+          tds + "<td><strong>" + totS + "</strong></td><td><strong>" + totE + "</strong></td></tr>";
+      }));
+    } catch (e) {
+      el.innerHTML = '<p class="erro">' + escaparHtml(String(e.message || e)) + "</p>";
+    } finally {
+      botao.disabled = false;
+      botao.textContent = t("evolucaoBotao");
+    }
+  }
+
   function tabelaHtml(cabecalho, linhas) {
     return '<div class="balanco-scroll"><table class="tabela-balanco tabela-sac"><tr>' +
       cabecalho.map(function (c) { return '<th class="' + (c.item ? "item" : "") + '">' + c.texto + "</th>"; }).join("") +
@@ -3185,6 +3383,10 @@
     var reparos = (ultimosReparosAbertosCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; }).length;
     if (reparos && (abaAtual === "" || abaAtual === "reparo_externo")) {
       chips.push('<button type="button" class="chip-atencao" data-ir="cartao-reparos-abertos">' + t("atencaoReparos") + " <strong>" + reparos + "</strong></button>");
+    }
+    var assistencias = (ultimasAssistenciasAbertasCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; }).length;
+    if (assistencias && (abaAtual === "" || abaAtual === "sac")) {
+      chips.push('<button type="button" class="chip-atencao" data-ir="cartao-assistencias-abertas">' + t("atencaoAssistencias") + " <strong>" + assistencias + "</strong></button>");
     }
     el.innerHTML = chips.join("") || '<span class="chip-ok">' + t("atencaoTudoEmDia") + "</span>";
   }
@@ -3917,7 +4119,8 @@
         buscarContagemPorFluxo(filtros),
         buscarReparosEmAberto(),
         compararPeriodo && !cacheValido ? buscarMovimentosFiltrados(filtrosComparacao) : Promise.resolve(null),
-        buscarFechamentosDoPeriodo(filtros)
+        buscarFechamentosDoPeriodo(filtros),
+        buscarAssistenciasEmAberto()
       ]);
       var dadosFiltrados = resultados[0];
       var pendentes = resultados[1];
@@ -3936,6 +4139,7 @@
       }
       renderizarContagemAbas(contagemPorFluxo);
       renderizarReparosAbertos(reparosAbertos);
+      renderizarAssistenciasAbertas(resultados[7]);
 
       var precisamOriginal = [];
       var jaPedidos = {};
@@ -4058,6 +4262,7 @@
     document.getElementById("filtro-busca").addEventListener("input", reaplicarBusca);
 
     document.getElementById("botao-relatorio").addEventListener("click", gerarRelatorio);
+    document.getElementById("botao-evolucao").addEventListener("click", mostrarEvolucao);
     document.querySelectorAll(".subaba").forEach(function (botao) {
       botao.addEventListener("click", function () { selecionarSubaba(botao.getAttribute("data-subaba")); });
     });
