@@ -2064,11 +2064,18 @@
     if (e.key === "Enter") tentarEntrar();
   });
 
+  // Visita repetida na mesma aba (F5 / Ctrl+Shift+R): as credenciais ja
+  // estao no sessionStorage. `setTimeout` adia o `liberarAcesso()` ate o
+  // script inteiro ter rodado - chamado aqui no meio, `iniciar() ->
+  // atualizar()` rodava antes de `var seqAtualizar = 0` (la embaixo): a
+  // consulta saia com `minhaVez = NaN`, o `var` zerava o contador e a
+  // resposta era descartada como "velha" - a tela ficava em "Carregando..."
+  // ate a atualizacao automatica de 5 min (bug real, 2026-10-07).
   var credenciaisDaSessao = null;
   try { credenciaisDaSessao = JSON.parse(sessionStorage.getItem(CHAVE_SESSAO) || "null"); } catch (e) {}
   if (credenciaisDaSessao && credenciaisDaSessao.url && credenciaisDaSessao.token) {
     aplicarCredenciais(credenciaisDaSessao);
-    liberarAcesso();
+    setTimeout(liberarAcesso, 0);
   }
 
   // ---- Dados ----
