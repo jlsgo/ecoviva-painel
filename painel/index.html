@@ -608,12 +608,35 @@
   .mapa-calor-titulo { font-weight: 800; margin: 0 0 6px; }
   .mapa-calor-scroll { overflow-x: auto; }
   /* Faixa de atencao (sincronizacao + pendencias) */
-  .atencao-itens { display: flex; flex-wrap: wrap; gap: 8px; }
-  button.chip-atencao { background: var(--cartao); color: var(--texto); border: 1px solid var(--borda); border-radius: 4px; padding: 3px 10px; font: inherit; font-size: 0.8rem; cursor: pointer; }
-  button.chip-atencao strong { font-variant-numeric: tabular-nums; }
-  button.chip-atencao.alerta { border-color: var(--erro); color: var(--erro); }
-  button.chip-atencao.aviso { border-color: var(--aviso); color: var(--aviso); }
-  button.chip-atencao:hover { background: var(--bg); }
+  #cartao-atencao h3 { margin: 0 0 10px; }
+  .lista-atencao { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .atencao-linha {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 12px;
+    border: 1px solid var(--borda); border-left: 4px solid var(--borda); border-radius: 6px; background: var(--cartao);
+  }
+  .atencao-linha.alerta { border-left-color: var(--erro); }
+  .atencao-linha.aviso { border-left-color: var(--aviso); }
+  .atencao-texto { flex: 1 1 260px; display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; }
+  .atencao-texto strong { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .atencao-detalhe { font-size: 0.8rem; color: var(--texto-suave); }
+  .atencao-ok { font-size: 0.9rem; color: var(--texto-suave); }
+  .atencao-no-prazo { margin: 10px 0 0; font-size: 0.8rem; color: var(--texto-suave); }
+  .atencao-no-prazo:empty { display: none; }
+  /* .tabela-balanco estiliza `tr:first-child th` como cabecalho - aqui a
+     primeira linha do corpo e o mes atual, entao reafirma o estilo de linha. */
+  .tabela-balanco.tabela-mes tbody th[scope="row"] {
+    width: 40%; font-size: 0.95rem; font-weight: 600; color: var(--texto); vertical-align: middle;
+    white-space: nowrap; border-bottom: 1px solid var(--linha);
+  }
+  .tabela-mes td .tile-delta { display: block; font-size: 0.75rem; }
+  .tabela-balanco.tabela-mes tbody tr.mes-atual > * { background: var(--verde-claro); }
+  @media (max-width: 720px) {
+    .tabela-balanco.tabela-mes tbody th[scope="row"] { width: auto; white-space: normal; }
+    .tabela-mes .mes-parcial { display: block; }
+  }
+  .mes-parcial { font-weight: 400; font-size: 0.78rem; color: var(--texto-suave); }
+  .nota-previsao { margin: 8px 0 0; font-size: 0.85rem; }
+  #tabela-evolucao:not(:empty) { margin-top: 14px; }
   .chip-ok { font-size: 0.8rem; color: var(--texto-suave); }
   .kpi-nota { font-size: 0.72rem; color: var(--texto-suave); margin-top: auto; padding-top: 4px; }
   .texto-aviso { color: var(--aviso); }
@@ -974,8 +997,15 @@
     <div class="faixa-sync" title="Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado." data-i18n-title="cartaoSyncSubtitulo">
       <span class="faixa-sync-rotulo" data-i18n="faixaSyncRotulo">Ultima sincronizacao</span>
       <div id="status-armazens" class="status-armazens"></div>
-      <div id="atencao-itens" class="atencao-itens"></div>
     </div>
+
+    <!-- So o que pede acao, com prazo: o que ainda esta dentro do prazo vira
+         uma linha discreta embaixo, sem disputar atencao. -->
+    <section class="cartao" id="cartao-atencao">
+      <h3 data-i18n="atencaoTitulo">Precisa de atencao</h3>
+      <ul id="atencao-itens" class="lista-atencao"></ul>
+      <p id="atencao-no-prazo" class="atencao-no-prazo"></p>
+    </section>
 
     <section class="cartao" id="cartao-insights">
       <div class="cartao-cabecalho">
@@ -1003,6 +1033,17 @@
         <h4 data-i18n="destaquesTitulo">Destaques do periodo</h4>
         <ul id="destaques" class="destaques"></ul>
       </div>
+      <!-- Mes a mes: agregado no SQL, em cache por 30 min (nao roda a cada
+           atualizacao de 5 min). Nao depende do periodo escolhido acima. -->
+      <div class="grafico-bloco" id="bloco-evolucao">
+        <div class="cartao-cabecalho">
+          <span class="cabecalho-acoes"><h4 data-i18n="evolucaoTitulo" style="margin:0">Mes a mes</h4>
+            <span class="info" tabindex="0" data-i18n-title="evolucaoNota">?</span></span>
+          <button type="button" id="botao-evolucao" class="secundario" data-i18n="evolucaoBotao">Ver por categoria</button>
+        </div>
+        <div id="mes-a-mes"></div>
+        <div id="tabela-evolucao"></div>
+      </div>
       <h4 class="grade-fluxos-titulo" id="grade-fluxos-titulo" data-i18n="gradeFluxosTitulo">Por tipo de lancamento</h4>
       <div id="grade-fluxos" class="grade-fluxos"></div>
       <div class="grafico-bloco">
@@ -1023,15 +1064,6 @@
           <h4 data-i18n="graficoCategoriasTitulo">O que saiu para fora, por categoria</h4>
           <div id="grafico-categorias"></div>
         </div>
-      </div>
-      <!-- #54: sob demanda (botao), agregado no SQL - nada roda no ciclo de 5 min. -->
-      <div class="grafico-bloco" id="bloco-evolucao">
-        <div class="cartao-cabecalho">
-          <span class="cabecalho-acoes"><h4 data-i18n="evolucaoTitulo" style="margin:0">Evolucao mes a mes (ultimos 12 meses)</h4>
-            <span class="info" tabindex="0" data-i18n-title="evolucaoNota">?</span></span>
-          <button type="button" id="botao-evolucao" class="secundario" data-i18n="evolucaoBotao">Ver evolucao</button>
-        </div>
-        <div id="tabela-evolucao"></div>
       </div>
       </div>
       <div data-painel-subaba="sac">
@@ -1310,7 +1342,6 @@
       assistenciaGarantia: "garantia",
       assistenciaChamado: "chamado",
       assistenciaDias: "dias parado",
-      atencaoAssistencias: "Assistencias em aberto:",
       nenhuma: "Nenhuma.",
       cartaoMovimentosTitulo: "Movimentos recentes",
       colArmazem: "Armazem",
@@ -1413,7 +1444,6 @@
       sacCortesias: "Cortesias (un.)",
       semFechamentoTitulo: "Dias sem fechamento",
       semFechamentoNenhum: "Todos os dias com lancamento foram fechados.",
-      atencaoSemFechamento: "Dias sem fechamento:",
       relatorioCarregando: "Gerando...",
       relatorioErro: "Nao foi possivel gerar o relatorio (sem internet para carregar o gerador?).",
       subabaOperacao: "Operacao",
@@ -1443,10 +1473,32 @@
       unidadeDia: "d",
       maisFiltros: "Mais filtros",
       subabaGeral: "Visao geral",
-      evolucaoTitulo: "Evolucao mes a mes (ultimos 12 meses)",
-      evolucaoBotao: "Ver evolucao",
+      evolucaoTitulo: "Mes a mes",
+      evolucaoBotao: "Ver por categoria",
+      evolucaoEsconder: "Esconder categorias",
+      mesAteDia: "ate dia {dia}",
+      mesDesde: "desde {data}",
+      previsaoMes: "No ritmo atual, {mes} fecha com ~{saiu} unidades saindo para fora ({anterior}: {valorAnterior}).",
+      deltaVs: "vs.",
+      atencaoTitulo: "Precisa de atencao",
+      atencaoVer: "Ver",
+      atencaoSync: "{armazem} sem sincronizar - ultimo envio {tempo}",
+      atencaoSyncDetalhe: "Em horario de expediente. Confira se o PC esta ligado, com internet e com o programa aberto.",
+      atencaoChamados: "{n} chamado(s) de Assistencia aberto(s) ha mais de {dias} dias",
+      atencaoTransfVelhas: "{n} transferencia(s) sem confirmar desde ontem ou antes",
+      atencaoReparosVelhos: "{n} peca(s) com o tecnico externo ha mais de {dias} dias",
+      atencaoRecusasTexto: "{n} recebimento(s) recusado(s) sem estorno de quem enviou",
+      atencaoSemFechamentoTexto: "{n} dia(s) sem fechamento no periodo",
+      atencaoMaisAntigo: "Mais antigo: {item}, ha {dias} dias.",
+      atencaoTransfDetalhe: "Mais antiga: {origem} → {destino}, enviada {data}.",
+      atencaoRecusasDetalhe: "Quem enviou precisa estornar o envio - ver Erros e correcoes.",
+      atencaoNoPrazo: "Em aberto, ainda no prazo:",
+      noPrazoChamados: "{n} chamado(s)",
+      noPrazoTransf: "{n} transferencia(s) de hoje",
+      noPrazoReparos: "{n} peca(s) no tecnico externo",
+      atencaoNadaPendente: "Nada precisa de atencao agora.",
       evolucaoCarregando: "Calculando...",
-      evolucaoNota: "Unidades que sairam para fora e que entraram de fora, por categoria, ja descontando estornos. Transferencia entre A4 e B2 nao entra. Respeita o filtro de armazem.",
+      evolucaoNota: "Unidades que sairam para fora e que entraram de fora em cada mes (ultimos 12), ja descontando estornos. Transferencia entre A4 e B2 nao entra. Nao depende do periodo escolhido acima; respeita o armazem e a aba. O mes atual e comparado com os mesmos dias do mes anterior.",
       evolucaoMes: "Mes",
       evolucaoSaiu: "saiu",
       evolucaoEntrou: "entrou",
@@ -1466,10 +1518,6 @@
       fluxoReparoEnviado: "Enviado ao tecnico",
       fluxoReparoVoltou: "Voltou do tecnico",
       fluxoReparoAberto: "Em aberto agora",
-      atencaoTransf: "Transferencias aguardando confirmacao:",
-      atencaoRecusas: "Recusas sem estorno:",
-      atencaoReparos: "Reparos em aberto:",
-      atencaoTudoEmDia: "Nada pendente.",
       sacTitulo: "SAC - vendas x garantias",
       sacGarantiasItemTitulo: "Garantias por item",
       sacVendasItemTitulo: "Vendas por item",
@@ -1597,7 +1645,6 @@
       cartaoAssistenciasSubtitulo: "进入客服技术维修、尚未交还的车辆。",
       assistenciaChamado: "工单",
       assistenciaDias: "天未处理",
-      atencaoAssistencias: "未结技术维修：",
       nenhuma: "无。",
       cartaoMovimentosTitulo: "最近的记录",
       colArmazem: "仓库",
@@ -1700,7 +1747,6 @@
       sacCortesias: "赠品（件）",
       semFechamentoTitulo: "未日结的日期",
       semFechamentoNenhum: "所有有记录的日期均已日结。",
-      atencaoSemFechamento: "未日结天数：",
       relatorioCarregando: "生成中...",
       relatorioErro: "无法生成报表（无法联网加载生成器？）。",
       subabaOperacao: "运营",
@@ -1730,10 +1776,32 @@
       unidadeDia: "天",
       maisFiltros: "更多筛选",
       subabaGeral: "总览",
-      evolucaoTitulo: "逐月变化（最近12个月）",
-      evolucaoBotao: "查看变化",
+      evolucaoTitulo: "逐月对比",
+      evolucaoBotao: "按类别查看",
+      evolucaoEsconder: "隐藏类别",
+      mesAteDia: "截至 {dia} 日",
+      mesDesde: "自 {data} 起",
+      previsaoMes: "按目前节奏，{mes}预计对外出库约 {saiu} 件（{anterior}：{valorAnterior}）。",
+      deltaVs: "对比",
+      atencaoTitulo: "需要关注",
+      atencaoVer: "查看",
+      atencaoSync: "{armazem} 未同步 - 最后一次 {tempo}",
+      atencaoSyncDetalhe: "现在是工作时间。请检查电脑是否开机、联网并打开了程序。",
+      atencaoChamados: "{n} 个技术维修工单已超过 {dias} 天未结",
+      atencaoTransfVelhas: "{n} 笔调拨自昨天或更早仍未确认",
+      atencaoReparosVelhos: "{n} 件零件在外部技师处超过 {dias} 天",
+      atencaoRecusasTexto: "{n} 笔拒收尚未由发货方冲销",
+      atencaoSemFechamentoTexto: "本期 {n} 天未日结",
+      atencaoMaisAntigo: "最早：{item}，{dias} 天。",
+      atencaoTransfDetalhe: "最早：{origem} → {destino}，发出于 {data}。",
+      atencaoRecusasDetalhe: "发货方需要冲销该发货 - 见“错误与更正”。",
+      atencaoNoPrazo: "未结但仍在期限内：",
+      noPrazoChamados: "{n} 个工单",
+      noPrazoTransf: "今天的 {n} 笔调拨",
+      noPrazoReparos: "{n} 件在外部技师处",
+      atencaoNadaPendente: "目前没有需要关注的事项。",
       evolucaoCarregando: "计算中...",
-      evolucaoNota: "按类别统计的对外出库和外部入库数量（已扣除冲销）。A4 与 B2 之间的调拨不计入。按仓库筛选。",
+      evolucaoNota: "每月对外出库和外部入库数量（最近12个月，已扣除冲销）。A4 与 B2 之间的调拨不计入。不受上方日期影响；按仓库和标签筛选。本月与上月相同天数对比。",
       evolucaoMes: "月份",
       evolucaoSaiu: "出库",
       evolucaoEntrou: "入库",
@@ -1753,10 +1821,6 @@
       fluxoReparoEnviado: "送外部维修",
       fluxoReparoVoltou: "维修返回",
       fluxoReparoAberto: "当前未结",
-      atencaoTransf: "待确认调拨：",
-      atencaoRecusas: "未冲销拒收：",
-      atencaoReparos: "未结维修：",
-      atencaoTudoEmDia: "没有待处理事项。",
       sacTitulo: "客服 - 销售与保修",
       sacGarantiasItemTitulo: "保修（按商品）",
       sacVendasItemTitulo: "销售（按商品）",
@@ -3487,41 +3551,74 @@
     "THEN CASE WHEN COALESCE(o.armazem_destino_codigo, m.armazem_destino_codigo) IS NULL THEN 'saiu' ELSE 'transf' END " +
     "ELSE CASE WHEN COALESCE(o.recebido_de_armazem_codigo, m.recebido_de_armazem_codigo) IS NULL THEN 'entrou' ELSE 'transf' END END AS classe, " +
     "json_extract(j.value, '$.categoria') AS categoria, " +
-    "SUM((CASE WHEN m.estornado_de IS NULL THEN 1 ELSE -1 END) * json_extract(j.value, '$.quantidade')) AS unidades " +
+    "SUM((CASE WHEN m.estornado_de IS NULL THEN 1 ELSE -1 END) * json_extract(j.value, '$.quantidade')) AS unidades, " +
+    "(CAST(substr(m.data, 9, 2) AS INTEGER) <= CAST(?4 AS INTEGER)) AS ate_dia " +
     "FROM movimentos_consolidados m " +
     "LEFT JOIN movimentos_consolidados o ON m.estornado_de IS NOT NULL " +
     "AND o.armazem_codigo = m.armazem_codigo AND o.id_origem = m.estornado_de, " +
     "json_each(m.itens_json) j " +
-    "WHERE m.data >= ? AND m.data <= ? AND (? = '' OR m.armazem_codigo = ?) " +
+    "WHERE m.data >= ?1 AND m.data <= ?2 AND (?3 = '' OR m.armazem_codigo = ?3) AND (?5 = '' OR m.fluxo = ?5) " +
     "AND NOT (COALESCE(o.motivo, m.motivo) = 'recusado' " +
     "AND COALESCE(o.recebido_de_armazem_codigo, m.recebido_de_armazem_codigo) IS NOT NULL) " +
-    "GROUP BY 1, 2, 3, 4";
+    "GROUP BY 1, 2, 3, 4, 6";
   var CATEGORIAS_EVOLUCAO = ["scooter", "triciclo", "patinete", "peca", "ferramenta", "insumo", "outro"];
+
+  // Uma consulta alimenta o "Mes a mes" e a tabela por categoria; fica em
+  // cache 30 min por armazem/aba (o ciclo de 5 min nao refaz a consulta -
+  // o Turso ja estourou cota uma vez, ver docs).
+  var VALIDADE_EVOLUCAO_MS = 30 * 60 * 1000;
+  var evolucaoCache = { chave: null, promessa: null, timestampMs: 0 };
+
+  function buscarEvolucao() {
+    var armazem = document.getElementById("filtro-armazem").value || "";
+    var agora = new Date();
+    var hoje = dataIso(agora);
+    var chave = armazem + "|" + abaAtual + "|" + hoje;
+    if (evolucaoCache.chave === chave && Date.now() - evolucaoCache.timestampMs < VALIDADE_EVOLUCAO_MS) {
+      return evolucaoCache.promessa;
+    }
+    var inicio = new Date(agora.getFullYear(), agora.getMonth() - 11, 1);
+    var promessa = executarSql(SQL_EVOLUCAO, [dataIso(inicio), hoje, armazem, agora.getDate(), abaAtual || ""])
+      .then(function (linhas) {
+        var v = function (l, i) { return l[i] && l[i].value !== undefined ? l[i].value : null; };
+        return linhas.map(function (l) {
+          return {
+            mes: v(l, 0), armazem: v(l, 1), classe: v(l, 2), categoria: v(l, 3) || "outro",
+            unidades: Number(v(l, 4) || 0), ateDia: Number(v(l, 5)) === 1
+          };
+        });
+      });
+    evolucaoCache = { chave: chave, promessa: promessa, timestampMs: Date.now() };
+    promessa.catch(function () { if (evolucaoCache.promessa === promessa) evolucaoCache.chave = null; });
+    return promessa;
+  }
+
+  function alternarEvolucao() {
+    var el = document.getElementById("tabela-evolucao");
+    if (el.innerHTML) {
+      el.innerHTML = "";
+      document.getElementById("botao-evolucao").textContent = t("evolucaoBotao");
+      return;
+    }
+    mostrarEvolucao();
+  }
 
   async function mostrarEvolucao() {
     var botao = document.getElementById("botao-evolucao");
     var el = document.getElementById("tabela-evolucao");
-    var armazem = document.getElementById("filtro-armazem").value || "";
-    var hoje = dataIso(new Date());
-    var d = new Date();
-    d.setDate(1);
-    d.setMonth(d.getMonth() - 11);
-    var inicio = dataIso(d);
     botao.disabled = true;
     botao.textContent = t("evolucaoCarregando");
+    var aberta = false;
     try {
-      var linhas = await executarSql(SQL_EVOLUCAO, [inicio, hoje, armazem, armazem]);
-      var v = function (l, i) { return l[i] && l[i].value !== undefined ? l[i].value : null; };
+      var linhas = await buscarEvolucao();
       var tabela = {};
       linhas.forEach(function (l) {
-        var classe = v(l, 2);
-        if (classe === "transf") return;
-        var chave = v(l, 0) + "|" + v(l, 1);
-        var linha = tabela[chave] || (tabela[chave] = { mes: v(l, 0), armazem: v(l, 1), saiu: {}, entrou: {} });
-        var cat = v(l, 3) || "outro";
-        linha[classe][cat] = (linha[classe][cat] || 0) + Number(v(l, 4) || 0);
+        if (l.classe === "transf") return;
+        var chave = l.mes + "|" + l.armazem;
+        var linha = tabela[chave] || (tabela[chave] = { mes: l.mes, armazem: l.armazem, saiu: {}, entrou: {} });
+        linha[l.classe][l.categoria] = (linha[l.classe][l.categoria] || 0) + l.unidades;
       });
-      var chaves = Object.keys(tabela).sort();
+      var chaves = Object.keys(tabela).sort().reverse();
       if (!chaves.length) {
         el.innerHTML = "<p>" + t("evolucaoVazio") + "</p>";
         return;
@@ -3537,6 +3634,7 @@
       cab.push({ texto: t("evolucaoTotal") + " " + t("evolucaoSaiu") });
       cab.push({ texto: t("evolucaoTotal") + " " + t("evolucaoEntrou") });
       var celula = function (n) { return '<td class="' + (n ? "" : "zero") + '">' + (n || 0) + "</td>"; };
+      aberta = true;
       el.innerHTML = tabelaHtml(cab, chaves.map(function (k) {
         var x = tabela[k];
         var totS = 0, totE = 0;
@@ -3552,7 +3650,135 @@
       el.innerHTML = '<p class="erro">' + escaparHtml(String(e.message || e)) + "</p>";
     } finally {
       botao.disabled = false;
-      botao.textContent = t("evolucaoBotao");
+      botao.textContent = t(aberta ? "evolucaoEsconder" : "evolucaoBotao");
+    }
+  }
+
+  // ---- Mes a mes: o mes atual contra os MESMOS dias do mes anterior (1-7/out
+  // x 1-7/set), os meses fechados contra o mes inteiro anterior, e uma
+  // previsao do mes atual pelo ritmo. Mais recente no topo. ----
+  var NOMES_MES_PT = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+  function nomeMes(mesIso, comAno) {
+    var n = Number(mesIso.slice(5, 7));
+    if (idiomaAtual === "zh") return (comAno ? mesIso.slice(0, 4) + "年" : "") + n + "月";
+    return NOMES_MES_PT[n - 1] + (comAno ? "/" + mesIso.slice(0, 4) : "");
+  }
+
+  // "1–7/set" (mesmo mes) ou "24/09/2026–30/09/2026".
+  function periodoCurto(inicio, fim) {
+    if (inicio === fim) return formatarData(inicio);
+    if (inicio.slice(0, 7) === fim.slice(0, 7)) {
+      var a = Number(inicio.slice(8, 10)), b = Number(fim.slice(8, 10));
+      return idiomaAtual === "zh" ? nomeMes(inicio) + a + "–" + b + "日" : a + "–" + b + "/" + nomeMes(inicio);
+    }
+    return formatarData(inicio) + "–" + formatarData(fim);
+  }
+
+  function mesAnterior(mesIso) {
+    return dataIso(new Date(Number(mesIso.slice(0, 4)), Number(mesIso.slice(5, 7)) - 2, 1)).slice(0, 7);
+  }
+
+  // Peso de cada dia pelo expediente: seg-sex 10 h, sabado 4 h, domingo 0
+  // (no historico, sabado tem ~1/8 do movimento de um dia de semana).
+  function pesoDoDia(d) {
+    var dia = d.getDay();
+    if (dia === 0) return 0;
+    return (dia === 6 ? EXPEDIENTE.fimSabado : EXPEDIENTE.fim) - EXPEDIENTE.inicio;
+  }
+
+  // Quanto do expediente do mes ja passou (0-1); hoje conta pelas horas.
+  function fracaoDoMes(agora) {
+    var total = 0, passado = 0;
+    var ultimo = new Date(agora.getFullYear(), agora.getMonth() + 1, 0).getDate();
+    for (var dia = 1; dia <= ultimo; dia++) {
+      var p = pesoDoDia(new Date(agora.getFullYear(), agora.getMonth(), dia));
+      total += p;
+      if (dia < agora.getDate()) passado += p;
+      else if (dia === agora.getDate()) {
+        passado += Math.min(p, Math.max(0, agora.getHours() + agora.getMinutes() / 60 - EXPEDIENTE.inicio));
+      }
+    }
+    return total ? passado / total : 0;
+  }
+
+  // Com menos de ~15% do mes (3-4 dias uteis) a previsao oscila demais.
+  var FRACAO_MINIMA_PREVISAO = 0.15;
+
+  function preencher(texto, valores) {
+    return texto.replace(/\{(\w+)\}/g, function (_, k) { return valores[k] != null ? valores[k] : ""; });
+  }
+
+  var seqMesAMes = 0;
+  async function renderizarMesAMes() {
+    var el = document.getElementById("mes-a-mes");
+    var minhaVez = ++seqMesAMes;
+    try {
+      var resultados = await Promise.all([buscarEvolucao(), buscarPrimeiroDia()]);
+      if (minhaVez !== seqMesAMes) return;
+      var linhas = resultados[0], primeiroDia = resultados[1];
+      var porMes = {};
+      linhas.forEach(function (l) {
+        if (l.classe !== "saiu" && l.classe !== "entrou") return;
+        var x = porMes[l.mes] || (porMes[l.mes] = { saiu: 0, entrou: 0, saiuAteDia: 0, entrouAteDia: 0 });
+        x[l.classe] += l.unidades;
+        if (l.ateDia) x[l.classe + "AteDia"] += l.unidades;
+      });
+      var meses = Object.keys(porMes).sort().reverse();
+      if (!meses.length) {
+        el.innerHTML = "<p>" + t("evolucaoVazio") + "</p>";
+        return;
+      }
+      var agora = new Date();
+      var mesAtual = dataIso(agora).slice(0, 7);
+      var dia = agora.getDate();
+      // Mes que comecou no meio (primeiro dia de uso do sistema) nao serve de
+      // base - "▲ 1300% vs. ago" so diria que agosto teve 6 dias.
+      var mesIncompleto = primeiroDia && primeiroDia.slice(8, 10) !== "01" ? primeiroDia.slice(0, 7) : null;
+      var corpo = meses.map(function (mes) {
+        var x = porMes[mes];
+        var ant = mesAnterior(mes);
+        var base = ant !== mesIncompleto ? porMes[ant] : null;
+        var ehAtual = mes === mesAtual;
+        var rotulo, antSaiu = null, antEntrou = null;
+        if (base && ehAtual) {
+          var fimAnt = Math.min(dia, new Date(Number(ant.slice(0, 4)), Number(ant.slice(5, 7)), 0).getDate());
+          rotulo = t("deltaVs") + " " + periodoCurto(ant + "-01", ant + "-" + String(fimAnt).padStart(2, "0"));
+          antSaiu = base.saiuAteDia;
+          antEntrou = base.entrouAteDia;
+        } else if (base) {
+          rotulo = t("deltaVs") + " " + nomeMes(ant);
+          antSaiu = base.saiu;
+          antEntrou = base.entrou;
+        }
+        var obs = ehAtual ? preencher(t("mesAteDia"), { dia: dia })
+          : mes === mesIncompleto ? preencher(t("mesDesde"), { data: formatarData(primeiroDia) }) : "";
+        var celula = function (n, anterior) {
+          return "<td><strong>" + formatarNumero(n) + "</strong>" + (anterior != null ? deltaTexto(n, anterior, rotulo) : "") + "</td>";
+        };
+        return "<tr" + (ehAtual ? ' class="mes-atual"' : "") + '><th scope="row">' + nomeMes(mes, true) +
+          (obs ? ' <span class="mes-parcial">' + obs + "</span>" : "") + "</th>" +
+          celula(x.saiu, antSaiu) + celula(x.entrou, antEntrou) + "</tr>";
+      });
+      var html = '<div class="balanco-scroll"><table class="tabela-balanco tabela-mes"><thead><tr><th></th><th>' +
+        t("balancoSaida") + "</th><th>" + t("balancoEntrada") + "</th></tr></thead><tbody>" + corpo.join("") + "</tbody></table></div>";
+      var fracao = fracaoDoMes(agora);
+      var xa = porMes[mesAtual];
+      // So a saida: entrada chega em lote (conteiner) e projetar por ritmo
+      // engana - um conteiner no dia 1 "previa" o dobro do mes anterior.
+      var antAtual = mesAnterior(mesAtual);
+      var baseAtual = antAtual !== mesIncompleto ? porMes[antAtual] : null;
+      if (xa && baseAtual && fracao >= FRACAO_MINIMA_PREVISAO && fracao < 1) {
+        html += '<p class="nota-previsao">' + preencher(t("previsaoMes"), {
+          mes: nomeMes(mesAtual), saiu: formatarNumero(Math.round(xa.saiu / fracao)),
+          anterior: nomeMes(antAtual), valorAnterior: formatarNumero(baseAtual.saiu)
+        }) + "</p>";
+      }
+      el.innerHTML = html;
+      if (document.getElementById("tabela-evolucao").innerHTML) mostrarEvolucao();
+    } catch (e) {
+      if (minhaVez !== seqMesAMes) return;
+      el.innerHTML = '<p class="erro">' + escaparHtml(String(e.message || e)) + "</p>";
     }
   }
 
@@ -3672,28 +3898,92 @@
     document.getElementById("botao-mais-filtros").classList.toggle("ativo", abrir);
   }
 
-  // Faixa de atencao, junto com a sincronizacao: o que precisa de acao, com
-  // atalho pro detalhe. Recusas contam so as do periodo carregado.
+  // "Precisa de atencao": so o que passou do prazo, mais antigo primeiro
+  // dentro de cada tipo, com atalho pro detalhe. O que esta em aberto mas
+  // ainda no prazo vira uma linha discreta embaixo.
+  var DIAS_ALERTA_CHAMADO = 7; // mesmo prazo do app (AssistenciaTecnica.tsx)
+  var DIAS_ALERTA_TRANSFERENCIA = 1;
+  var DIAS_ALERTA_REPARO = 15;
+
+  function linhaAtencao(nivel, texto, detalhe, alvo) {
+    return '<li class="atencao-linha ' + nivel + '"><span class="atencao-texto"><strong>' + texto + "</strong>" +
+      (detalhe ? '<span class="atencao-detalhe">' + detalhe + "</span>" : "") + "</span>" +
+      (alvo ? '<button type="button" class="secundario" ' + alvo + ">" + t("atencaoVer") + "</button>" : "") + "</li>";
+  }
+
   function renderizarAtencao() {
     var el = document.getElementById("atencao-itens");
     if (!el) return;
-    var chips = [];
-    var transf = pendentesNoFiltro(ultimosPendentesCache || []).length;
-    if (transf) chips.push('<button type="button" class="chip-atencao aviso" data-ir="cartao-pendentes">' + t("atencaoTransf") + " <strong>" + transf + "</strong></button>");
-    if (recusasAbertasNoPeriodo) chips.push('<button type="button" class="chip-atencao alerta" data-ir-subaba="erros">' + t("atencaoRecusas") + " <strong>" + recusasAbertasNoPeriodo + "</strong></button>");
-    if (diasSemFechamentoAtual && diasSemFechamentoAtual.length) {
-      chips.push('<button type="button" class="chip-atencao aviso" data-ir-subaba="operacao">' + t("atencaoSemFechamento") + " <strong>" + diasSemFechamentoAtual.length + "</strong></button>");
-    }
+    var hoje = dataIso(new Date());
     var armazem = document.getElementById("filtro-armazem").value;
-    var reparos = (ultimosReparosAbertosCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; }).length;
-    if (reparos && (abaAtual === "" || abaAtual === "reparo_externo")) {
-      chips.push('<button type="button" class="chip-atencao" data-ir="cartao-reparos-abertos">' + t("atencaoReparos") + " <strong>" + reparos + "</strong></button>");
+    var doArmazem = function (x) { return !armazem || x.armazem_codigo === armazem; };
+    var alertas = [], avisos = [], noPrazo = [];
+
+    if (ultimaSincPorArmazemCache) {
+      CODIGOS_ARMAZENS.forEach(function (c) {
+        if (armazem && c !== armazem) return;
+        var ultimo = ultimaSincPorArmazemCache[c];
+        if (frescor(ultimo) !== "frio") return;
+        alertas.push(linhaAtencao("alerta",
+          preencher(t("atencaoSync"), { armazem: c, tempo: ultimo ? tempoRelativo(ultimo) : t("nuncaSincronizou") }),
+          t("atencaoSyncDetalhe"), ""));
+      });
     }
-    var assistencias = (ultimasAssistenciasAbertasCache || []).filter(function (x) { return !armazem || x.armazem_codigo === armazem; }).length;
-    if (assistencias && (abaAtual === "" || abaAtual === "assistencia")) {
-      chips.push('<button type="button" class="chip-atencao" data-ir="cartao-assistencias-abertas">' + t("atencaoAssistencias") + " <strong>" + assistencias + "</strong></button>");
+
+    if (abaAtual === "" || abaAtual === "assistencia") {
+      var chamados = (ultimasAssistenciasAbertasCache || []).filter(doArmazem);
+      var chamadosVelhos = chamados.filter(function (x) { return diasEntre(x.data, hoje) > DIAS_ALERTA_CHAMADO; });
+      if (chamadosVelhos.length) {
+        var c0 = chamadosVelhos[0];
+        alertas.push(linhaAtencao("alerta",
+          preencher(t("atencaoChamados"), { n: chamadosVelhos.length, dias: DIAS_ALERTA_CHAMADO }),
+          preencher(t("atencaoMaisAntigo"), { item: escaparHtml(c0.chamado || "-") + " (" + c0.armazem_codigo + ")", dias: diasEntre(c0.data, hoje) }),
+          'data-ir="cartao-assistencias-abertas"'));
+      }
+      if (chamados.length > chamadosVelhos.length) noPrazo.push(preencher(t("noPrazoChamados"), { n: chamados.length - chamadosVelhos.length }));
     }
-    el.innerHTML = chips.join("") || '<span class="chip-ok">' + t("atencaoTudoEmDia") + "</span>";
+
+    if (recusasAbertasNoPeriodo) {
+      alertas.push(linhaAtencao("alerta", preencher(t("atencaoRecusasTexto"), { n: recusasAbertasNoPeriodo }),
+        t("atencaoRecusasDetalhe"), 'data-ir-subaba="erros"'));
+    }
+
+    var transf = pendentesNoFiltro(ultimosPendentesCache || []).slice().sort(function (a, b) {
+      return (a.data + a.hora).localeCompare(b.data + b.hora);
+    });
+    var transfVelhas = transf.filter(function (m) { return diasEntre(m.data, hoje) >= DIAS_ALERTA_TRANSFERENCIA; });
+    if (transfVelhas.length) {
+      var t0 = transfVelhas[0];
+      avisos.push(linhaAtencao("aviso", preencher(t("atencaoTransfVelhas"), { n: transfVelhas.length }),
+        preencher(t("atencaoTransfDetalhe"), { origem: t0.armazem_codigo, destino: t0.armazem_destino_codigo || "-", data: formatarData(t0.data) }),
+        'data-ir="cartao-pendentes"'));
+    }
+    if (transf.length > transfVelhas.length) noPrazo.push(preencher(t("noPrazoTransf"), { n: transf.length - transfVelhas.length }));
+
+    if (abaAtual === "" || abaAtual === "reparo_externo") {
+      var reparos = (ultimosReparosAbertosCache || []).filter(doArmazem);
+      var reparosVelhos = reparos.filter(function (x) { return diasEntre(x.data, hoje) > DIAS_ALERTA_REPARO; });
+      if (reparosVelhos.length) {
+        var r0 = reparosVelhos[0];
+        avisos.push(linhaAtencao("aviso",
+          preencher(t("atencaoReparosVelhos"), { n: reparosVelhos.length, dias: DIAS_ALERTA_REPARO }),
+          preencher(t("atencaoMaisAntigo"), { item: escaparHtml(r0.codigo_componente || "-") + " (" + r0.armazem_codigo + ")", dias: diasEntre(r0.data, hoje) }),
+          'data-ir="cartao-reparos-abertos"'));
+      }
+      if (reparos.length > reparosVelhos.length) noPrazo.push(preencher(t("noPrazoReparos"), { n: reparos.length - reparosVelhos.length }));
+    }
+
+    if (diasSemFechamentoAtual && diasSemFechamentoAtual.length) {
+      var exemplos = diasSemFechamentoAtual.slice(0, 3).map(function (x) {
+        return formatarData(x.data) + " " + escaparHtml(x.armazem) + " " + rotuloFluxo(x.fluxo);
+      }).join(" · ") + (diasSemFechamentoAtual.length > 3 ? " ..." : "");
+      avisos.push(linhaAtencao("aviso", preencher(t("atencaoSemFechamentoTexto"), { n: diasSemFechamentoAtual.length }),
+        exemplos, 'data-ir-subaba="operacao"'));
+    }
+
+    var todas = alertas.concat(avisos);
+    el.innerHTML = todas.join("") || '<li class="atencao-ok">' + t("atencaoNadaPendente") + "</li>";
+    document.getElementById("atencao-no-prazo").textContent = noPrazo.length ? t("atencaoNoPrazo") + " " + noPrazo.join(" · ") + "." : "";
   }
 
   // ---- Operacao (#57, #58): mapa de calor e gargalos, sobre os movimentos
@@ -4018,16 +4308,21 @@
     // Sem base de comparacao (#52) nao mostra nada - o selo "sem base"
     // ocupava espaco ao lado do numero sem dizer nada a quem le.
     if (comparacao.semBase) return "";
-    return deltaTexto(atual, comparacao.total[classe]);
+    var rotulo = comparacao.periodo
+      ? t("deltaVs") + " " + periodoCurto(comparacao.periodo.dataInicio, comparacao.periodo.dataFim)
+      : null;
+    return deltaTexto(atual, comparacao.total[classe], rotulo);
   }
 
-  function deltaTexto(atual, anterior) {
+  // `rotulo`: com o que esta comparando ("vs. 1–7/set") - sem ele, o
+  // generico "vs. periodo anterior".
+  function deltaTexto(atual, anterior, rotulo) {
     if (anterior == null) return "";
-    var titulo = ' title="' + t("deltaTitulo") + " " + anterior + '"';
+    var titulo = ' title="' + (rotulo ? escaparHtml(rotulo) + ":" : t("deltaTitulo")) + " " + anterior + '"';
     if (anterior === 0) return atual > 0 ? ' <span class="tile-delta"' + titulo + '>▲</span>' : "";
     var pct = Math.round(((atual - anterior) / anterior) * 100);
     if (pct === 0) return "";
-    return ' <span class="tile-delta"' + titulo + '>' + (pct > 0 ? "▲" : "▼") + " " + Math.abs(pct) + "% " + t("deltaVsAnterior") + "</span>";
+    return ' <span class="tile-delta"' + titulo + '>' + (pct > 0 ? "▲" : "▼") + " " + Math.abs(pct) + "% " + escaparHtml(rotulo || t("deltaVsAnterior")) + "</span>";
   }
 
   // Rotulo do numero "saiu pra fora" conforme a aba - em Saida de Armazem e
@@ -4459,6 +4754,7 @@
       periodo: textoPeriodoResumo()
     };
     renderizarAtencao();
+    renderizarMesAMes();
     aplicarSubaba();
   }
 
@@ -4543,7 +4839,9 @@
       var primeiroDia = compararPeriodo ? await buscarPrimeiroDia() : null;
       var semBase = !!(compararPeriodo && primeiroDia && filtrosComparacao.dataInicio < primeiroDia);
       if (semBase) compararPeriodo = false;
-      var chaveComparacao = compararPeriodo ? filtros.dataInicio + ":" + filtros.dataFim : null;
+      // Todos os filtros na chave (aba, armazem...), nao so o periodo - so com
+      // as datas, trocar de aba reaproveitava a comparacao da aba anterior.
+      var chaveComparacao = compararPeriodo ? JSON.stringify(filtros) : null;
       var cacheValido = compararPeriodo &&
         chaveComparacao === comparacaoCache.chave &&
         (Date.now() - comparacaoCache.timestampMs) < INTERVALO_MIN_COMPARACAO_MS;
@@ -4571,6 +4869,7 @@
         comparacaoInsights = comparacaoCache.insights;
       } else {
         comparacaoInsights = dadosComparacao ? calcularInsights(dadosComparacao.movimentos, criarBuscaOriginal(dadosComparacao.movimentos, null)) : null;
+        if (comparacaoInsights) comparacaoInsights.periodo = { dataInicio: filtrosComparacao.dataInicio, dataFim: filtrosComparacao.dataFim };
         comparacaoCache = { chave: chaveComparacao, insights: comparacaoInsights, timestampMs: Date.now() };
       }
       renderizarContagemAbas(contagemPorFluxo);
@@ -4707,7 +5006,7 @@
     document.getElementById("filtro-busca").addEventListener("input", reaplicarBusca);
 
     document.getElementById("botao-relatorio").addEventListener("click", gerarRelatorio);
-    document.getElementById("botao-evolucao").addEventListener("click", mostrarEvolucao);
+    document.getElementById("botao-evolucao").addEventListener("click", alternarEvolucao);
     document.querySelectorAll(".subaba").forEach(function (botao) {
       botao.addEventListener("click", function () { selecionarSubaba(botao.getAttribute("data-subaba")); });
     });
