@@ -374,13 +374,13 @@
      sincronizacao ja diz por armazem. O espaco foi pra Itens. */
   .col-armazem { width: 7%; }
   .col-fluxo { width: 8%; white-space: normal; }
-  .col-datahora { width: 8%; white-space: normal; font-variant-numeric: tabular-nums; color: var(--texto-suave); }
+  .col-datahora { width: 9%; white-space: normal; font-variant-numeric: tabular-nums; color: var(--texto-suave); }
   .col-qtd { width: 5%; font-variant-numeric: tabular-nums; text-align: right; font-weight: 600; }
-  .col-registrado { width: 9%; }
+  .col-registrado { width: 9%; white-space: normal; overflow-wrap: break-word; }
   .col-situacao { width: 11%; }
   .col-sincronizado { display: none; }
   .col-coleta { width: 11%; white-space: normal; }
-  .col-razaosocial { width: 12%; white-space: normal; overflow-wrap: break-word; }
+  .col-razaosocial { width: 11%; white-space: normal; overflow-wrap: break-word; }
   /* Colunas so fazem sentido dentro de fluxos especificos - a coluna Fluxo
      fica redundante depois que a aba ja filtrou pra um so (so continua
      visivel em "Todos"), e Razao Social so e coletada em saida_armazem/sac
@@ -765,6 +765,40 @@
     .filtros-linha-principal input[type="date"] { min-width: 0; width: 100%; }
     .tabela-balanco th, .tabela-balanco td { padding: 6px 8px; }
   }
+
+  /* Bordas (pedido do responsavel, 2026-10-07): toda coluna de tabela e todo
+     botao tem contorno de 1px. Continua sem sombra; a cor so aparece no
+     estado ativo e sempre com significado (cor do fluxo / verde de acao). */
+  table th + th, table td + td { border-left: 1px solid var(--borda); }
+  .mapa-calor th + th, .mapa-calor td + td { border-left: none; }
+  /* No celular a tabela vira cartoes (uma celula por linha): sem fio vertical. */
+  @media (max-width: 720px) { .tabela-scroll td + td, .tabela-scroll th + th { border-left: none; } }
+  .abas-fluxo { gap: 6px; padding-bottom: 8px; }
+  .aba-fluxo {
+    background: var(--cartao);
+    border: 1px solid var(--borda);
+    border-radius: 4px;
+    margin-bottom: 0;
+    padding: 7px 12px;
+  }
+  .aba-fluxo:hover { border-color: var(--texto-suave); }
+  .aba-fluxo.ativa {
+    border-color: var(--cor-fluxo, var(--texto));
+    box-shadow: inset 0 -2px 0 var(--cor-fluxo, var(--texto));
+  }
+  .subabas { gap: 6px; border-bottom: none; }
+  button.subaba {
+    background: var(--cartao);
+    border: 1px solid var(--borda);
+    border-radius: 4px;
+    margin-bottom: 0;
+    padding: 6px 12px;
+  }
+  button.subaba:hover { background: var(--cartao); border-color: var(--texto-suave); }
+  button.subaba.ativa { background: var(--verde-claro); border-color: var(--verde); }
+  .gate button:not(.secundario), .filtros button:not(.secundario):not(.atalho) { border: 1px solid var(--verde-escuro); }
+  .filtros button.atalho { border: 1px solid var(--borda); }
+  .filtros button.atalho.ativo { border-color: var(--verde); }
 </style>
 </head>
 <body>
