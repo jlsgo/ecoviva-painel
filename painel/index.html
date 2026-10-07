@@ -799,6 +799,43 @@
   .gate button:not(.secundario), .filtros button:not(.secundario):not(.atalho) { border: 1px solid var(--verde-escuro); }
   .filtros button.atalho { border: 1px solid var(--borda); }
   .filtros button.atalho.ativo { border-color: var(--verde); }
+
+  /* Armazem em botoes (Todos | A4 | B2) - antes era um <select> pequeno e
+     separar A4 de B2 exigia abrir a lista. O <select id="filtro-armazem">
+     continua no HTML (escondido) como fonte da verdade do filtro. */
+  .seletor-armazem { display: inline-flex; }
+  .filtros .seletor-armazem button.atalho {
+    border-radius: 0; margin-left: -1px; min-width: 58px;
+    padding: 8px 14px; font-size: 0.875rem; font-weight: 650;
+  }
+  .filtros .seletor-armazem button.atalho:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+  .filtros .seletor-armazem button.atalho:last-child { border-radius: 0 4px 4px 0; }
+  .filtros .seletor-armazem button.atalho.ativo { position: relative; z-index: 1; background: var(--verde-escuro); border-color: var(--verde-escuro); color: #fff; }
+
+  /* Numeros principais e destaques em cartoes com borda; o filete de cima
+     leva a cor do numero (azul = saiu, verde = entrou...). */
+  .grade-kpis, .destaques { gap: 12px; }
+  .kpi, .kpi:first-child {
+    border: 1px solid var(--borda); border-top: 3px solid var(--kpi-cor);
+    border-radius: 6px; padding: 14px 16px; background: var(--cartao);
+  }
+  .destaque, .destaque:first-child {
+    border: 1px solid var(--borda); border-radius: 6px; padding: 12px 16px; background: var(--cartao);
+  }
+  /* "A4 120 · B2 51" dentro do cartao quando o filtro e Todos - clicar
+     filtra por aquele armazem. */
+  .kpi-armazens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  button.chip-armazem {
+    background: var(--bg); color: var(--texto-suave); border: 1px solid var(--borda); border-radius: 4px;
+    padding: 3px 8px; font-size: 0.78rem; font-weight: 500; font-variant-numeric: tabular-nums;
+  }
+  button.chip-armazem strong { color: var(--texto); font-weight: 650; margin-left: 4px; }
+  button.chip-armazem:hover { background: var(--bg); border-color: var(--texto-suave); color: var(--texto); }
+  @media (max-width: 720px) {
+    .kpi, .kpi:first-child { padding: 12px 14px; border-top: 3px solid var(--kpi-cor); }
+    .seletor-armazem { display: flex; }
+    .filtros .seletor-armazem button.atalho { flex: 1; }
+  }
 </style>
 </head>
 <body>
@@ -871,7 +908,12 @@
     <div class="cartao filtros">
       <div class="filtros-linha filtros-linha-principal">
         <label><span data-i18n="filtroArmazemLabel">Armazem</span>
-          <select id="filtro-armazem">
+          <div class="seletor-armazem" role="radiogroup">
+            <button type="button" class="atalho" role="radio" data-armazem="" data-i18n="opcaoTodos">Todos</button>
+            <button type="button" class="atalho" role="radio" data-armazem="A4">A4</button>
+            <button type="button" class="atalho" role="radio" data-armazem="B2">B2</button>
+          </div>
+          <select id="filtro-armazem" hidden>
             <option value="" data-i18n="opcaoTodos">Todos</option>
             <option value="A4">A4</option>
             <option value="B2">B2</option>
@@ -1229,6 +1271,7 @@
       filtroPedidoLabel: "Numero do pedido",
       filtroPedidoPlaceholder: "Ex: 3893",
       filtroArmazemLabel: "Armazem",
+      filtrarArmazem: "Ver so o armazem",
       opcaoTodos: "Todos",
       opcaoTodas: "Todas",
       fluxoSaidaArmazem: "Armazem",
@@ -1515,6 +1558,7 @@
       filtroPedidoLabel: "订单号",
       filtroPedidoPlaceholder: "例如：3893",
       filtroArmazemLabel: "仓库",
+      filtrarArmazem: "只看仓库",
       opcaoTodos: "全部",
       opcaoTodas: "全部",
       fluxoSaidaArmazem: "仓库",
@@ -4000,8 +4044,21 @@
       (opcoes.unidade ? ' <span class="kpi-unidade">' + opcoes.unidade + '</span>' : "") + '</div>' +
       (opcoes.delta ? '<div>' + opcoes.delta + '</div>' : "") +
       (opcoes.divisao || "") +
+      (opcoes.armazens || "") +
       (opcoes.sub ? '<div class="kpi-sub">' + opcoes.sub + '</div>' : "") +
       '</div>';
+  }
+
+  // "A4 120 · B2 51" - so com o filtro em Todos e quando os dois armazens
+  // tem movimento no periodo. Cada chip filtra por aquele armazem.
+  function porArmazemHtml(d, classe) {
+    if (document.getElementById("filtro-armazem").value) return "";
+    var comValor = CODIGOS_ARMAZENS.filter(function (c) { return d.porArmazem[c]; });
+    if (comValor.length < 2) return "";
+    return '<div class="kpi-armazens">' + comValor.map(function (c) {
+      return '<button type="button" class="chip-armazem" data-armazem="' + c + '" title="' + escaparHtml(t("filtrarArmazem") + " " + c) + '">' +
+        c + "<strong>" + formatarNumero(d.porArmazem[c][classe] || 0) + "</strong></button>";
+    }).join("") + "</div>";
   }
 
   // "Veiculos 1296 · Pecas 1156" - so quando os dois grupos aparecem (na aba
@@ -4119,6 +4176,7 @@
       unidade: unidadesTexto(d.total.saida_externa),
       delta: deltaDe(comparacao, "saida_externa", d.total.saida_externa),
       divisao: divisaoHtml(d.totalGrupo, "saida_externa"),
+      armazens: porArmazemHtml(d, "saida_externa"),
       sub: subSaida,
       nota: semTransferencia ? "" : t("kpiSaidaNota")
     }));
@@ -4143,6 +4201,7 @@
       unidade: unidadesTexto(d.total.entrada_externa),
       delta: deltaDe(comparacao, "entrada_externa", d.total.entrada_externa),
       divisao: divisaoHtml(d.totalGrupo, "entrada_externa"),
+      armazens: porArmazemHtml(d, "entrada_externa"),
       nota: semTransferencia ? "" : t("kpiEntradaNota")
     }));
 
@@ -4153,6 +4212,7 @@
         rotulo: t("kpiTransferencias"),
         valor: d.total.transf_enviada,
         unidade: t("kpiTransferenciasUnidade"),
+        armazens: porArmazemHtml(d, "transf_enviada"),
         sub: t("kpiTransferenciasRecebidas") + " <strong>" + d.total.transf_recebida + "</strong>" +
           (emTransito ? ' &middot; <span class="texto-aviso">' + t("kpiTransferenciasTransito") + " <strong>" + emTransito + "</strong></span>" : ""),
         nota: t("kpiTransferenciasNota")
@@ -4323,6 +4383,22 @@
   }
 
   // "29/09/2026 · A4" - o que o resumo esta somando, sem precisar olhar os filtros.
+  function marcarArmazemAtivo() {
+    var atual = document.getElementById("filtro-armazem").value;
+    document.querySelectorAll(".seletor-armazem [data-armazem]").forEach(function (b) {
+      var ativo = b.getAttribute("data-armazem") === atual;
+      b.classList.toggle("ativo", ativo);
+      b.setAttribute("aria-checked", ativo ? "true" : "false");
+    });
+  }
+
+  function escolherArmazem(codigo) {
+    var select = document.getElementById("filtro-armazem");
+    if (select.value === codigo) return;
+    select.value = codigo;
+    select.dispatchEvent(new Event("change"));
+  }
+
   function textoPeriodoResumo() {
     var f = lerFiltrosDaTela();
     var periodo;
@@ -4602,6 +4678,12 @@
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") fecharDetalhe();
     });
+    document.addEventListener("click", function (e) {
+      var botao = e.target.closest && e.target.closest(".seletor-armazem [data-armazem], .chip-armazem");
+      if (botao) escolherArmazem(botao.getAttribute("data-armazem"));
+    });
+    document.getElementById("filtro-armazem").addEventListener("change", marcarArmazemAtivo);
+    marcarArmazemAtivo();
     [
       "filtro-armazem", "filtro-data-inicio", "filtro-data-fim",
       "filtro-tipo", "filtro-situacao", "filtro-responsavel"
