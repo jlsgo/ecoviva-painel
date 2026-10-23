@@ -394,6 +394,20 @@
      Externo - cada card so aparece onde faz sentido. */
   #conteudo[data-aba-atual="reparo_externo"] #cartao-pendentes { display: none; }
   /* Sem nada pendente o quadro some - a faixa de atencao ja diz "Nada pendente". */
+  /* Pendencias e detalhes recolhidos (<details>): o titulo e o proprio botao. */
+  .cartao-pendencia { padding-top: 14px; padding-bottom: 14px; }
+  .cartao-pendencia summary, .mais-detalhes > summary { cursor: pointer; list-style: none; }
+  .cartao-pendencia summary::-webkit-details-marker, .mais-detalhes > summary::-webkit-details-marker { display: none; }
+  .cartao-pendencia summary h3 { display: inline; margin: 0; }
+  .cartao-pendencia summary::before, .mais-detalhes > summary::before {
+    content: "\25B8"; display: inline-block; width: 1.1em; color: var(--texto-suave); transition: transform .15s;
+  }
+  .cartao-pendencia details[open] > summary::before, .mais-detalhes[open] > summary::before { transform: rotate(90deg); }
+  .cartao-pendencia details[open] > summary { margin-bottom: 10px; }
+  .contagem { color: var(--texto-suave); font-weight: 600; }
+  .mais-detalhes { margin-top: 18px; border-top: 1px solid var(--borda); padding-top: 14px; }
+  .mais-detalhes > summary { font-weight: 600; color: var(--texto); }
+  .mais-detalhes[open] > summary { margin-bottom: 12px; }
   #cartao-pendentes.vazio, #cartao-reparos-abertos.vazio, #cartao-assistencias-abertas.vazio { display: none; }
   #conteudo:not([data-aba-atual="todos"]):not([data-aba-atual="assistencia"]) #cartao-assistencias-abertas { display: none; }
   #cartao-chegadas.vazio { display: none; }
@@ -1009,6 +1023,35 @@
       <p id="atencao-no-prazo" class="atencao-no-prazo"></p>
     </section>
 
+    <!-- Pendencias (cobrar): logo abaixo do "Precisa de atencao", recolhidas com a
+         contagem no titulo - a lista inteira so abre no clique (ou no "Ver" do
+         cartao de atencao). Os ids e a classe .vazio continuam os mesmos. -->
+    <div class="cartao cartao-pendencia" id="cartao-pendentes">
+      <details>
+        <summary><h3><span data-i18n="cartaoPendentesTitulo">Transferencias pendentes de confirmacao</span> <span class="contagem" id="contagem-pendentes"></span></h3></summary>
+        <div id="lista-pendentes" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
+      </details>
+    </div>
+
+    <!-- So faz sentido nas abas Todos/Reparo Externo - as outras 3 nunca
+         tem reparo externo, ver #conteudo[data-aba-atual] no <style>. -->
+    <div class="cartao cartao-pendencia" id="cartao-reparos-abertos">
+      <details>
+        <summary><h3><span data-i18n="cartaoReparosAbertosTitulo">Reparos externos em aberto</span> <span class="contagem" id="contagem-reparos"></span></h3></summary>
+        <p class="subtitulo-cartao" data-i18n="cartaoReparosAbertosSubtitulo">Pecas que sairam pro tecnico externo e ainda nao voltaram.</p>
+        <div id="lista-reparos-abertos" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
+      </details>
+    </div>
+
+    <!-- Assistencia Tecnica (app v6.0) - so nas abas Todos/Assistencia. -->
+    <div class="cartao cartao-pendencia" id="cartao-assistencias-abertas">
+      <details>
+        <summary><h3><span data-i18n="cartaoAssistenciasTitulo">Assistencia tecnica em aberto</span> <span class="contagem" id="contagem-assistencias"></span></h3></summary>
+        <p class="subtitulo-cartao" data-i18n="cartaoAssistenciasSubtitulo">Chamados de clientes que entraram para conserto e ainda nao foram devolvidos.</p>
+        <div id="lista-assistencias-abertas" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
+      </details>
+    </div>
+
     <section class="cartao" id="cartao-insights">
       <div class="cartao-cabecalho">
         <span class="cabecalho-acoes"><h3 data-i18n="cartaoInsightsTitulo">Resumo do periodo</h3>
@@ -1031,10 +1074,6 @@
       <div data-painel-subaba="geral">
       <div id="grade-kpis" class="grade-kpis"></div>
       <div id="faixa-secundaria" class="faixa-secundaria"></div>
-      <div class="grafico-bloco escondido" id="bloco-destaques">
-        <h4 data-i18n="destaquesTitulo">Destaques do periodo</h4>
-        <ul id="destaques" class="destaques"></ul>
-      </div>
       <!-- Mes a mes: agregado no SQL, em cache por 30 min (nao roda a cada
            atualizacao de 5 min). Nao depende do periodo escolhido acima. -->
       <div class="grafico-bloco" id="bloco-evolucao">
@@ -1045,6 +1084,14 @@
         </div>
         <div id="mes-a-mes"></div>
         <div id="tabela-evolucao"></div>
+      </div>
+      <!-- O mesmo periodo visto por tipo, por armazem e por categoria: util para
+           conferir, mas repete os numeros de cima - fica recolhido. -->
+      <details class="mais-detalhes" id="detalhes-periodo">
+      <summary data-i18n="detalharPeriodo">Detalhar o periodo: por tipo, por armazem e por categoria</summary>
+      <div class="grafico-bloco escondido" id="bloco-destaques">
+        <h4 data-i18n="destaquesTitulo">Destaques do periodo</h4>
+        <ul id="destaques" class="destaques"></ul>
       </div>
       <h4 class="grade-fluxos-titulo" id="grade-fluxos-titulo" data-i18n="gradeFluxosTitulo">Por tipo de lancamento</h4>
       <div id="grade-fluxos" class="grade-fluxos"></div>
@@ -1067,6 +1114,7 @@
           <div id="grafico-categorias"></div>
         </div>
       </div>
+      </details>
       </div>
       <div data-painel-subaba="sac">
       <div class="grafico-bloco escondido" id="bloco-sac">
@@ -1133,32 +1181,12 @@
       </div>
     </section>
 
-    <div class="cartao" id="cartao-pendentes">
-      <h3 data-i18n="cartaoPendentesTitulo">Transferencias pendentes de confirmacao</h3>
-      <div id="lista-pendentes" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
-    </div>
-
-    <!-- So faz sentido nas abas Todos/Reparo Externo - as outras 3 nunca
-         tem reparo externo, ver #conteudo[data-aba-atual] no <style>. -->
-    <div class="cartao" id="cartao-reparos-abertos">
-      <h3 data-i18n="cartaoReparosAbertosTitulo">Reparos externos em aberto</h3>
-      <p class="subtitulo-cartao" data-i18n="cartaoReparosAbertosSubtitulo">Pecas que sairam pro tecnico externo e ainda nao voltaram.</p>
-      <div id="lista-reparos-abertos" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
-    </div>
-
     <!-- Chegadas de carga (app v6.0): entradas com numero de container no
          periodo filtrado - pro responsavel copiar no Sistema de Montagem. -->
     <div class="cartao" id="cartao-chegadas">
       <h3 data-i18n="cartaoChegadasTitulo">Chegadas de carga</h3>
       <p class="subtitulo-cartao" data-i18n="cartaoChegadasSubtitulo">Containers descarregados no periodo, com os modelos e quem descarregou.</p>
       <div id="lista-chegadas" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
-    </div>
-
-    <!-- Assistencia Tecnica (app v6.0) - so nas abas Todos/Assistencia. -->
-    <div class="cartao" id="cartao-assistencias-abertas">
-      <h3 data-i18n="cartaoAssistenciasTitulo">Assistencia tecnica em aberto</h3>
-      <p class="subtitulo-cartao" data-i18n="cartaoAssistenciasSubtitulo">Chamados de clientes que entraram para conserto e ainda nao foram devolvidos.</p>
-      <div id="lista-assistencias-abertas" class="lista-pendentes"><p data-i18n="nenhuma">Nenhuma.</p></div>
     </div>
 
     <div class="cartao">
@@ -1295,63 +1323,63 @@
   var TRADUCOES = {
     pt: {
       gateTitulo: "Painel Ecoviva",
-      gateDescricao: "Acesso restrito - digite a senha combinada com a gestao.",
+      gateDescricao: "Acesso restrito - digite a senha combinada com a gestão.",
       senhaPlaceholder: "Senha",
       botaoEntrar: "Entrar",
       senhaIncorreta: "Senha incorreta.",
-      headerTitulo: "Painel Ecoviva - Armazens A4 / B2 / B7",
+      headerTitulo: "Painel Ecoviva - Armazéns A4 / B2 / B7",
       badgeSomenteLeitura: "somente leitura",
-      badgeSomenteLeituraTitulo: "Este painel so consegue LER os dados - o acesso usado aqui e um token do banco configurado para nunca aceitar escrita, reforcado pelo proprio servidor do banco (nao e so uma trava no codigo desta pagina). Os dados vem do app oficial de cada armazem, que registra cada lancamento com um hash de auditoria encadeado.",
-      filtroPedidoLabel: "Numero do pedido",
+      badgeSomenteLeituraTitulo: "Este painel só consegue LER os dados - o acesso usado aqui e um token do banco configurado para nunca aceitar escrita, reforçado pelo próprio servidor do banco (não e só uma trava no código desta página). Os dados vem do app oficial de cada armazém, que registra cada lançamento com um hash de auditoria encadeado.",
+      filtroPedidoLabel: "Número do pedido",
       filtroPedidoPlaceholder: "Ex: 3893",
-      filtroArmazemLabel: "Armazem",
-      filtrarArmazem: "Ver so o armazem",
+      filtroArmazemLabel: "Armazém",
+      filtrarArmazem: "Ver só o armazém",
       opcaoTodos: "Todos",
       opcaoTodas: "Todas",
-      fluxoSaidaArmazem: "Armazem",
+      fluxoSaidaArmazem: "Armazém",
       fluxoMontagem: "Montagem",
       fluxoSac: "SAC",
       fluxoReparoExterno: "Reparo Externo",
-      fluxoAssistencia: "Assistencia Tecnica",
-      kpiSaidaAssistencia: "Devolvido / enviado ao tecnico",
+      fluxoAssistencia: "Assistência Técnica",
+      kpiSaidaAssistencia: "Devolvido / enviado ao técnico",
       filtroDeLabel: "De",
-      filtroAteLabel: "Ate",
+      filtroAteLabel: "Até",
       atalhoHoje: "Hoje",
-      atalhoMesAtual: "Mes atual",
-      filtroResponsavelLabel: "Responsavel",
+      atalhoMesAtual: "Mês atual",
+      filtroResponsavelLabel: "Responsável",
       filtroTipoLabel: "Tipo",
       tipoEntrada: "Entrada",
-      tipoSaida: "Saida",
-      filtroSituacaoLabel: "Situacao",
+      tipoSaida: "Saída",
+      filtroSituacaoLabel: "Situação",
       situacaoEstorno: "Estorno",
       situacaoRecusado: "Recusado",
       filtroBuscaLabel: "Busca",
       filtroBuscaPlaceholder: "Nome ou item",
       botaoAtualizar: "Atualizar agora",
       botaoExportarCsv: "Exportar CSV",
-      cartaoSyncSubtitulo: "Quando cada armazem mandou dado pela ultima vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado.",
-      avisoTruncadoTexto: "Este filtro tem mais movimentos do que o carregado - os numeros abaixo estao incompletos. Reduza o periodo ou refine o filtro pra ver o total real.",
-      cartaoPendentesTitulo: "Transferencias pendentes de confirmacao",
+      cartaoSyncSubtitulo: "Quando cada armazém mandou dado pela última vez - se um ficar muito tempo sem sincronizar, o que aparece dele aqui pode estar desatualizado.",
+      avisoTruncadoTexto: "Este filtro tem mais movimentos do que o carregado - os números abaixo estão incompletos. Reduza o período ou refine o filtro pra ver o total real.",
+      cartaoPendentesTitulo: "Transferências pendentes de confirmação",
       cartaoReparosAbertosTitulo: "Reparos externos em aberto",
-      cartaoReparosAbertosSubtitulo: "Pecas que sairam pro tecnico externo e ainda nao voltaram.",
-      cartaoAssistenciasTitulo: "Assistencia tecnica em aberto",
-      cartaoAssistenciasSubtitulo: "Chamados de clientes que entraram para conserto e ainda nao foram devolvidos.",
+      cartaoReparosAbertosSubtitulo: "Peças que saíram pro técnico externo e ainda não voltaram.",
+      cartaoAssistenciasTitulo: "Assistência técnica em aberto",
+      cartaoAssistenciasSubtitulo: "Chamados de clientes que entraram para conserto e ainda não foram devolvidos.",
       cartaoChegadasTitulo: "Chegadas de carga",
-      cartaoChegadasSubtitulo: "Containers descarregados no periodo, com os modelos e quem descarregou.",
+      cartaoChegadasSubtitulo: "Containers descarregados no período, com os modelos e quem descarregou.",
       chegadaDescarregou: "descarregou",
-      assistenciaExterno: "com o tecnico externo",
+      assistenciaExterno: "com o técnico externo",
       assistenciaPago: "reparo pago",
       assistenciaGarantia: "garantia",
       assistenciaChamado: "chamado",
       assistenciaDias: "dias parado",
       nenhuma: "Nenhuma.",
       cartaoMovimentosTitulo: "Movimentos recentes",
-      colArmazem: "Armazem",
+      colArmazem: "Armazém",
       colFluxo: "Fluxo",
       colData: "Data/Hora",
       colPedido: "Pedido",
       colColeta: "Coleta",
-      colRazaoSocial: "Razao Social",
+      colRazaoSocial: "Razão Social",
       modalCampoContainer: "Container",
       modalCampoDescarregou: "Quem descarregou",
       modalCampoPaletes: "Paletes",
@@ -1359,7 +1387,7 @@
       colItens: "Itens",
       colQtd: "Qtd.",
       colRegistradoPor: "Registrado por",
-      colSituacao: "Situacao",
+      colSituacao: "Situação",
       colSincronizado: "Sincronizado",
       coletaEnviadoPara: "Enviado para",
       coletaRecebidoDe: "Recebido de",
@@ -1367,232 +1395,233 @@
       montagemCaixa: "Em caixa",
       montagemOutro: "Outro",
       estornoRefPedido: "Estorno do pedido",
-      estornoRefHorario: "Estorno do lancamento de",
-      estornoRefNaoEncontrado: "Estorno de um lancamento fora do filtro atual",
-      rodapePagina: "Este painel espelha os dados do app oficial dos armazens em tempo quase real - nao e a fonte oficial nem o lugar pra conferir a integridade de um lancamento especifico (cada lancamento tem um hash de auditoria encadeado que fica no app, nao reproduzido aqui).",
+      estornoRefHorario: "Estorno do lançamento de",
+      estornoRefNaoEncontrado: "Estorno de um lançamento fora do filtro atual",
+      rodapePagina: "Este painel espelha os dados do app oficial dos armazéns em tempo quase real - não e a fonte oficial nem o lugar pra conferir a integridade de um lançamento específico (cada lançamento tem um hash de auditoria encadeado que fica no app, não reproduzido aqui).",
       statusCarregando: "Carregando...",
       nuncaSincronizou: "nunca sincronizou",
       tempoAgoraMesmo: "agora mesmo",
       badgePendente: "pendente",
-      semDadosPeriodo: "Sem dados no periodo.",
+      semDadosPeriodo: "Sem dados no período.",
       situacaoEstornoBadge: "Estorno",
       situacaoBaixaBadge: "Baixa",
       situacaoEntradaBadge: "Entrada",
       situacaoRecusadoBadge: "Recusado",
-      divergenciaBadge: "divergencia",
-      cartaoInsightsTitulo: "Resumo do periodo",
-      cartaoInsightsSubtitulo: "Em unidades, ja descontando estornos. Transferencia entre armazens e movimento interno: aparece so no bloco dela, nunca como entrada ou saida da empresa.",
-      faixaSyncRotulo: "Ultima sincronizacao",
-      periodoTudo: "todo o periodo",
-      kpiSaidaTodos: "Saiu para fora (todos os fluxos)",
+      divergenciaBadge: "divergência",
+      detalharPeriodo: "Detalhar o período: por tipo, por armazém e por categoria",
+      cartaoInsightsTitulo: "Resumo do período",
+      cartaoInsightsSubtitulo: "Em unidades, já descontando estornos. Transferência entre armazéns e movimento interno: aparece só no bloco dela, nunca como entrada ou saída da empresa.",
+      faixaSyncRotulo: "Última sincronização",
+      periodoTudo: "todo o período",
+      kpiSaidaTodos: "Saiu da empresa (todos os fluxos)",
       kpiSaidaArmazem: "Expedido p/ cliente ou transportadora",
-      kpiSaidaMontagem: "Pecas que sairam para fora",
+      kpiSaidaMontagem: "Peças que saíram da empresa",
       kpiSaidaSac: "Saiu do SAC",
-      kpiSaidaReparo: "Enviado ao tecnico",
-      kpiSaidaNota: "Nao conta envio entre armazens.",
+      kpiSaidaReparo: "Enviado ao técnico",
+      kpiSaidaNota: "Não conta envio entre armazéns.",
       kpiPedidos: "Pedidos expedidos",
-      kpiPedidosNota: "Numeros de pedido distintos que sairam na aba Armazem.",
-      kpiEntrada: "Entrou de fora",
-      kpiEntradaReparo: "Voltou do tecnico",
-      kpiEntradaNota: "Nao conta recebimento de transferencia.",
-      kpiTransferencias: "Transferencias entre armazens",
+      kpiPedidosNota: "Números de pedido distintos que saíram na aba Armazém.",
+      kpiEntrada: "Entrou na empresa",
+      kpiEntradaReparo: "Voltou do técnico",
+      kpiEntradaNota: "Não conta recebimento de transferência.",
+      kpiTransferencias: "Transferências entre armazéns",
       kpiTransferenciasUnidade: "un. enviadas",
       kpiTransferenciasRecebidas: "recebidas",
-      kpiTransferenciasTransito: "envios aguardando confirmacao",
-      kpiTransferenciasNota: "Movimento interno - nao soma nas entradas nem nas saidas.",
+      kpiTransferenciasTransito: "envios aguardando confirmação",
+      kpiTransferenciasNota: "Movimento interno - não soma nas entradas nem nas saídas.",
       unidadeSingular: "unidade",
       unidadePlural: "unidades",
-      deltaTitulo: "Periodo anterior de mesmo tamanho:",
+      deltaTitulo: "Período anterior de mesmo tamanho:",
       semBase: "sem base",
-      deltaVsAnterior: "vs. periodo anterior",
-      destaquesTitulo: "Destaques do periodo",
-      destPicoSaida: "Dia com mais saida",
-      destMediaDia: "media de {n} por dia com movimento",
+      deltaVsAnterior: "vs. período anterior",
+      destaquesTitulo: "Destaques do período",
+      destPicoSaida: "Dia com mais saída",
+      destMediaDia: "média de {n} por dia com movimento",
       destMaiorEntrada: "Maior entrada num dia",
-      destPctEntrada: "{p}% de tudo que entrou no periodo",
+      destPctEntrada: "{p}% de tudo que entrou no período",
       destCategoria: "O que mais saiu",
       destCategoriaDetalhe: "{n} de {t} unidades",
-      destArmazens: "Saidas por armazem",
-      destCorrecoes: "Lancamentos corrigidos",
-      destCorrecoesDetalhe: "{n} estornos em {t} lancamentos",
-      destAntes: "periodo anterior: {p}",
+      destArmazens: "Saídas por armazém",
+      destCorrecoes: "Lançamentos corrigidos",
+      destCorrecoesDetalhe: "{n} estornos em {t} lançamentos",
+      destAntes: "período anterior: {p}",
       legendaSemFechamento: "Dia sem fechamento",
       unidadeAbrev: "un.",
-      foraExpediente: "Fora do horario de trabalho - os PCs ficam desligados, sem alerta.",
-      semBaseTitulo: "Sem comparacao: o periodo anterior comeca antes do primeiro dia com dados no sistema,",
-      grupoVeiculos: "Veiculos",
-      grupoPecas: "Pecas",
-      grupoPecasTitulo: "Pecas e itens da categoria Outro",
-      grupoVeiculosCurto: "veic.",
-      grupoPecasCurto: "pecas",
-      secLancamentos: "Lancamentos",
+      foraExpediente: "Fora do horário de trabalho - os PCs ficam desligados, sem alerta.",
+      semBaseTitulo: "Sem comparação: o período anterior começa antes do primeiro dia com dados no sistema,",
+      grupoVeiculos: "Veículos",
+      grupoPecas: "Peças",
+      grupoPecasTitulo: "Peças e itens da categoria Outro",
+      grupoVeiculosCurto: "veíc.",
+      grupoPecasCurto: "peças",
+      secLancamentos: "Lançamentos",
       secEstornos: "Estornos",
       secRecusas: "Recebimentos recusados",
       secVendasSac: "Vendas SAC",
       secGarantiasSac: "Garantias SAC",
-      balancoTitulo: "Balanco por armazem (unidades)",
-      balancoEntrada: "Entrou de fora",
-      balancoRecebido: "Recebido do outro armazem",
-      balancoEnviado: "Enviado ao outro armazem",
-      balancoSaida: "Saiu para fora",
+      balancoTitulo: "Balanço por armazém (unidades)",
+      balancoEntrada: "Entrou na empresa",
+      balancoRecebido: "Recebido do outro armazém",
+      balancoEnviado: "Enviado ao outro armazém",
+      balancoSaida: "Saiu da empresa",
       balancoEmpresa: "Empresa",
       balancoInterno: "interno",
-      balancoInternoTitulo: "Transferencia entre armazens nao entra no total da empresa - o que sai de um entra no outro.",
+      balancoInternoTitulo: "Transferência entre armazéns não entra no total da empresa - o que sai de um entra no outro.",
       graficoDiasTitulo: "Por dia",
-      legendaSaida: "Saiu para fora",
-      legendaEntrada: "Entrou de fora",
-      graficoCategoriasTitulo: "O que saiu para fora, por categoria",
-      botaoRelatorio: "Relatorio (XLSX)",
+      legendaSaida: "Saiu da empresa",
+      legendaEntrada: "Entrou na empresa",
+      graficoCategoriasTitulo: "O que saiu da empresa, por categoria",
+      botaoRelatorio: "Relatório (XLSX)",
       sacCortesias: "Cortesias (un.)",
       semFechamentoTitulo: "Dias sem fechamento",
-      semFechamentoNenhum: "Todos os dias com lancamento foram fechados.",
+      semFechamentoNenhum: "Todos os dias com lançamento foram fechados.",
       relatorioCarregando: "Gerando...",
-      relatorioErro: "Nao foi possivel gerar o relatorio (sem internet para carregar o gerador?).",
-      subabaOperacao: "Operacao",
-      calorTitulo: "Lancamentos por dia da semana e hora",
-      calorNota: "Cada quadrado soma os lancamentos do periodo naquele dia da semana e hora (passe o mouse para ver as unidades). Mais escuro = mais movimento. Mostra os picos para alocar gente.",
+      relatorioErro: "Não foi possível gerar o relatório (sem internet para carregar o gerador?).",
+      subabaOperacao: "Operação",
+      calorTitulo: "Lançamentos por dia da semana e hora",
+      calorNota: "Cada quadrado soma os lançamentos do período naquele dia da semana e hora (passe o mouse para ver as unidades). Mais escuro = mais movimento. Mostra os picos para alocar gente.",
       calorTotal: "Total",
       calorFora: "fora",
-      calorForaTitulo: "Lancamentos fora do horario habitual (horas com menos de 1% do movimento)",
-      calorMediaDia: "media/dia",
+      calorForaTitulo: "Lançamentos fora do horário habitual (horas com menos de 1% do movimento)",
+      calorMediaDia: "média/dia",
       calorUnidades: "unidades",
-      gargaloTransfTitulo: "Tempo ate confirmar transferencia",
+      gargaloTransfTitulo: "Tempo até confirmar transferência",
       gargaloReparoTitulo: "Reparo externo",
       gargaloRota: "Rota",
       gargaloConfirmadas: "Confirmadas",
-      gargaloMediana: "Tempo tipico",
+      gargaloMediana: "Tempo típico",
       gargaloMesmoDia: "No mesmo dia",
       gargaloMaior: "Mais demorada",
       gargaloLentas: "Mais de 1 dia para confirmar",
-      gargaloSemTransf: "Nenhuma transferencia confirmada no periodo.",
-      gargaloRetornos: "Voltaram no periodo",
-      gargaloMediaDias: "Tempo medio no tecnico",
+      gargaloSemTransf: "Nenhuma transferência confirmada no período.",
+      gargaloRetornos: "Voltaram no período",
+      gargaloMediaDias: "Tempo médio no técnico",
       gargaloAbertos: "Em aberto agora",
-      gargaloParados: "Parados ha mais de 7 dias",
-      gargaloSemReparo: "Nenhum reparo externo no periodo.",
+      gargaloParados: "Parados há mais de 7 dias",
+      gargaloSemReparo: "Nenhum reparo externo no período.",
       unidadeMin: "min",
       unidadeHora: "h",
       unidadeDia: "d",
       maisFiltros: "Mais filtros",
-      subabaGeral: "Visao geral",
-      evolucaoTitulo: "Mes a mes",
+      subabaGeral: "Visão geral",
+      evolucaoTitulo: "Mês a mês",
       evolucaoBotao: "Ver por categoria",
       evolucaoEsconder: "Esconder categorias",
-      mesAteDia: "ate dia {dia}",
+      mesAteDia: "até dia {dia}",
       mesDesde: "desde {data}",
-      previsaoMes: "No ritmo atual, {mes} fecha com ~{saiu} unidades saindo para fora ({anterior}: {valorAnterior}).",
+      previsaoMes: "No ritmo atual, {mes} fecha com ~{saiu} unidades saindo da empresa ({anterior}: {valorAnterior}).",
       deltaVs: "vs.",
-      atencaoTitulo: "Precisa de atencao",
+      atencaoTitulo: "Precisa de atenção",
       atencaoVer: "Ver",
-      atencaoSync: "{armazem} sem sincronizar - ultimo envio {tempo}",
-      atencaoSyncDetalhe: "Em horario de expediente. Confira se o PC esta ligado, com internet e com o programa aberto.",
-      atencaoChamados: "{n} chamado(s) de Assistencia aberto(s) ha mais de {dias} dias",
-      atencaoTransfVelhas: "{n} transferencia(s) sem confirmar desde ontem ou antes",
-      atencaoReparosVelhos: "{n} peca(s) com o tecnico externo ha mais de {dias} dias",
+      atencaoSync: "{armazem} sem sincronizar - último envio {tempo}",
+      atencaoSyncDetalhe: "Em horário de expediente. Confira se o PC esta ligado, com internet e com o programa aberto.",
+      atencaoChamados: "{n} chamado(s) de Assistência aberto(s) há mais de {dias} dias",
+      atencaoTransfVelhas: "{n} transferência(s) sem confirmar desde ontem ou antes",
+      atencaoReparosVelhos: "{n} peça(s) com o técnico externo há mais de {dias} dias",
       atencaoRecusasTexto: "{n} recebimento(s) recusado(s) sem estorno de quem enviou",
-      atencaoSemFechamentoTexto: "{n} dia(s) sem fechamento no periodo",
-      atencaoMaisAntigo: "Mais antigo: {item}, ha {dias} dias.",
+      atencaoSemFechamentoTexto: "{n} dia(s) sem fechamento no período",
+      atencaoMaisAntigo: "Mais antigo: {item}, há {dias} dias.",
       atencaoTransfDetalhe: "Mais antiga: {origem} → {destino}, enviada {data}.",
-      atencaoRecusasDetalhe: "Quem enviou precisa estornar o envio - ver Erros e correcoes.",
+      atencaoRecusasDetalhe: "Quem enviou precisa estornar o envio - ver Erros e correções.",
       atencaoNoPrazo: "Em aberto, ainda no prazo:",
       noPrazoChamados: "{n} chamado(s)",
-      noPrazoTransf: "{n} transferencia(s) de hoje",
-      noPrazoReparos: "{n} peca(s) no tecnico externo",
-      atencaoNadaPendente: "Nada precisa de atencao agora.",
+      noPrazoTransf: "{n} transferência(s) de hoje",
+      noPrazoReparos: "{n} peça(s) no técnico externo",
+      atencaoNadaPendente: "Nada precisa de atenção agora.",
       evolucaoCarregando: "Calculando...",
-      evolucaoNota: "Unidades que sairam para fora e que entraram de fora em cada mes (ultimos 12), ja descontando estornos. Transferencia entre armazens nao entra. Nao depende do periodo escolhido acima; respeita o armazem e a aba. O mes atual e comparado com os mesmos dias do mes anterior.",
-      evolucaoMes: "Mes",
+      evolucaoNota: "Unidades que saíram da empresa e que entraram na empresa em cada mês (últimos 12), já descontando estornos. Transferência entre armazéns não entra. Não depende do período escolhido acima; respeita o armazém e a aba. O mês atual e comparado com os mesmos dias do mês anterior.",
+      evolucaoMes: "Mês",
       evolucaoSaiu: "saiu",
       evolucaoEntrou: "entrou",
       evolucaoTotal: "Total",
       evolucaoVazio: "Sem movimento nesses meses.",
       subabaSac: "SAC e valores",
-      subabaErros: "Erros e correcoes",
-      gradeFluxosTitulo: "Por tipo de lancamento",
+      subabaErros: "Erros e correções",
+      gradeFluxosTitulo: "Por tipo de lançamento",
       cardFluxoAbrir: "ver aba",
       fluxoExpedido: "Expedido para cliente / transportadora",
-      fluxoTransfEnviada: "Enviado ao outro armazem",
-      fluxoTransfRecebida: "Recebido do outro armazem",
-      fluxoSacSaiu: "Pecas que sairam do SAC",
+      fluxoTransfEnviada: "Enviado ao outro armazém",
+      fluxoTransfRecebida: "Recebido do outro armazém",
+      fluxoSacSaiu: "Peças que saíram do SAC",
       fluxoSacDevolucoes: "Entrou no SAC",
       fluxoSacSaldo: "Vendas - garantias",
-      fluxoMontagemFora: "Saiu para fora",
-      fluxoReparoEnviado: "Enviado ao tecnico",
-      fluxoReparoVoltou: "Voltou do tecnico",
+      fluxoMontagemFora: "Saiu da empresa",
+      fluxoReparoEnviado: "Enviado ao técnico",
+      fluxoReparoVoltou: "Voltou do técnico",
       fluxoReparoAberto: "Em aberto agora",
       sacTitulo: "SAC - vendas x garantias",
       sacGarantiasItemTitulo: "Garantias por item",
       sacVendasItemTitulo: "Vendas por item",
-      sacNota: "Mesmas regras dos totais acima (estorno desconta). Quantidade e exata. Valor por item: exato quando o item foi lancado sozinho; com ~ quando veio de lancamento com varios itens - ai o valor e dividido pelo preco de referencia de cada peca (mediana dos lancamentos em que ela aparece sozinha) ou, sem referencia, pela quantidade. \"Sem valor\" sao garantias gravadas antes de o valor ser obrigatorio (08/09).",
-      sacMes: "Mes",
+      sacNota: "Mesmas regras dos totais acima (estorno desconta). Quantidade e exata. Valor por item: exato quando o item foi lançado sozinho; com ~ quando veio de lançamento com vários itens - ai o valor e dividido pelo preço de referência de cada peça (mediana dos lançamentos em que ela aparece sozinha) ou, sem referência, pela quantidade. \"Sem valor\" são garantias gravadas antes de o valor ser obrigatório (08/09).",
+      sacMes: "Mês",
       sacVendas: "Vendas",
       sacGarantias: "Garantias",
       sacSaldo: "Vendas - garantias",
       sacSemValor: "Garantias sem valor",
-      sacSemValorTitulo: "Lancamentos de garantia sem valor informado - o total de garantias esta subestimado nesses meses.",
+      sacSemValorTitulo: "Lançamentos de garantia sem valor informado - o total de garantias esta subestimado nesses meses.",
       sacTotal: "Total",
       sacItem: "Item",
       sacQtd: "Qtd",
       sacValorItem: "Valor",
-      sacValorEstimadoTitulo: "Estimado (~): parte do valor veio de lancamentos com varios itens, dividido pelo preco de referencia de cada peca (ou pela quantidade, quando falta referencia).",
-      sacValorExatoTitulo: "Exato: so lancamentos com este item sozinho.",
-      sacSemDescricao: "(sem descricao)",
-      errosTitulo: "Erros e correcoes",
-      errosPorTipoTitulo: "Por armazem e tipo de lancamento",
+      sacValorEstimadoTitulo: "Estimado (~): parte do valor veio de lançamentos com vários itens, dividido pelo preço de referência de cada peça (ou pela quantidade, quando falta referência).",
+      sacValorExatoTitulo: "Exato: só lançamentos com este item sozinho.",
+      sacSemDescricao: "(sem descrição)",
+      errosTitulo: "Erros e correções",
+      errosPorTipoTitulo: "Por armazém e tipo de lançamento",
       errosCausasTitulo: "Causas",
-      errosPorResponsavelTitulo: "Por responsavel",
+      errosPorResponsavelTitulo: "Por responsável",
       errosRecusasTitulo: "Recebimentos recusados",
-      errosNota: "Estorno conta para quem fez o lancamento original; recusa conta para quem enviou. Taxa = estornos / lancamentos do grupo. Causas agrupadas por palavras do texto da justificativa (passe o mouse para ver os textos). E para achar o processo que gera erro, nao para comparar pessoas: quem lanca mais tambem tem mais chance de errar.",
+      errosNota: "Estorno conta para quem fez o lançamento original; recusa conta para quem enviou. Taxa = estornos / lançamentos do grupo. Causas agrupadas por palavras do texto da justificativa (passe o mouse para ver os textos). E para achar o processo que gera erro, não para comparar pessoas: quem lança mais também tem mais chance de errar.",
       errosResumoTaxa: "Taxa de estorno",
-      errosResumoTempo: "Tempo medio ate estornar",
+      errosResumoTempo: "Tempo médio até estornar",
       errosResumoAbertas: "Recusas sem estorno",
       errosDias: "dias",
       errosMesmoDia: "no mesmo dia",
-      errosArmazem: "Armazem",
+      errosArmazem: "Armazém",
       errosFluxo: "Tipo",
-      errosResponsavel: "Responsavel",
-      errosLancamentos: "Lancamentos",
+      errosResponsavel: "Responsável",
+      errosLancamentos: "Lançamentos",
       errosEstornos: "Estornos",
       errosTaxa: "Taxa",
       errosRecusasEnviadas: "Envios recusados",
       errosCausa: "Causa",
       errosData: "Data",
       errosRota: "Enviou -> recusou",
-      errosLancamento: "Lancamento",
+      errosLancamento: "Lançamento",
       errosMotivo: "Motivo",
-      errosSituacao: "Situacao",
+      errosSituacao: "Situação",
       errosCorrigidaEm: "estornado em",
-      errosAbertaHa: "SEM ESTORNO ha",
-      errosSemRecusas: "Nenhuma recusa no periodo.",
+      errosAbertaHa: "SEM ESTORNO há",
+      errosSemRecusas: "Nenhuma recusa no período.",
       causaQuantidade: "Quantidade errada",
-      causaPedido: "Numero do pedido",
-      causaDuplicado: "Lancado em duplicidade",
+      causaPedido: "Número do pedido",
+      causaDuplicado: "Lançado em duplicidade",
       causaValor: "Valor",
       causaRetiraSac: "Cliente retira / coleta em outro galpao",
       causaSistema: "Sistema travou / erro de sistema / teste",
-      causaPecaNaoIdentificada: "Peca nao identificada",
-      causaCliente: "Cliente, razao social ou transportadora",
+      causaPecaNaoIdentificada: "Peça não identificada",
+      causaCliente: "Cliente, razão social ou transportadora",
       causaVoltou: "Voltou / devolvido",
-      causaLancadoErrado: "Lancamento errado (sem detalhe)",
+      causaLancadoErrado: "Lançamento errado (sem detalhe)",
       errosCorrigidaMesmoDia: "estornado no mesmo dia",
-      causaNaoChegou: "Nao chegou / ficou no galpao",
-      causaJaEnviado: "Pedido ja enviado / de outro dia",
+      causaNaoChegou: "Não chegou / ficou no galpao",
+      causaJaEnviado: "Pedido já enviado / de outro dia",
       causaItem: "Item, categoria ou motivo",
       causaOutros: "Outros",
-      situacaoBaixa: "Baixa (saida para fora)",
+      situacaoBaixa: "Baixa (saída para fora)",
       situacaoEntrada: "Entrada (de fora)",
-      situacaoTransfEnviada: "Transferencia enviada",
-      situacaoTransfRecebida: "Transferencia recebida",
+      situacaoTransfEnviada: "Transferência enviada",
+      situacaoTransfRecebida: "Transferência recebida",
       situacaoTransfEnviadaBadge: "Transf.",
-      situacaoTransfEnviadaTitulo: "Envio pro outro armazem - movimento interno, nao e saida da empresa",
+      situacaoTransfEnviadaTitulo: "Envio pro outro armazém - movimento interno, não e saída da empresa",
       situacaoTransfRecebidaBadge: "Receb.",
-      situacaoTransfRecebidaTitulo: "Recebimento de transferencia do outro armazem - movimento interno, nao e entrada na empresa",
+      situacaoTransfRecebidaTitulo: "Recebimento de transferência do outro armazém - movimento interno, não e entrada na empresa",
       modalTituloDetalhe: "Detalhes do movimento",
       modalCampoObservacoes: "Observacoes",
-      modalRelacionadoOriginal: "Lancamento original (antes do estorno)",
-      modalRelacionadoEstorno: "Estorno deste lancamento",
-      modalRelacionadoEnvioOriginal: "Envio original (armazem de origem)",
-      modalRelacionadoRecebimento: "Confirmacao de recebimento",
+      modalRelacionadoOriginal: "Lançamento original (antes do estorno)",
+      modalRelacionadoEstorno: "Estorno deste lançamento",
+      modalRelacionadoEnvioOriginal: "Envio original (armazém de origem)",
+      modalRelacionadoRecebimento: "Confirmação de recebimento",
       modalRelacionadoEnvio: "Envio pro reparo externo",
       modalRelacionadoRetorno: "Retorno do reparo externo"
     },
@@ -1683,6 +1712,7 @@
       situacaoEntradaBadge: "入库",
       situacaoRecusadoBadge: "拒收",
       divergenciaBadge: "差异",
+      detalharPeriodo: "本期明细：按类型、仓库和类别",
       cartaoInsightsTitulo: "期间汇总",
       cartaoInsightsSubtitulo: "单位：件，已扣除冲销。仓库之间的调拨属于内部移动，只显示在调拨栏，不计为公司的入库或出库。",
       faixaSyncRotulo: "最近同步",
@@ -1902,13 +1932,13 @@
   };
 
   var ROTULO_FLUXO_IDIOMA = {
-    pt: { saida_armazem: "Armazem", peca_montagem: "Montagem", sac: "SAC", reparo_externo: "Reparo Externo", assistencia: "Assistencia Tecnica" },
+    pt: { saida_armazem: "Armazém", peca_montagem: "Montagem", sac: "SAC", reparo_externo: "Reparo Externo", assistencia: "Assistência Técnica" },
     zh: { saida_armazem: "仓库", peca_montagem: "组装", sac: "客服(SAC)", reparo_externo: "外部维修", assistencia: "技术支持" }
   };
   // Categorias fixas de item (ver domain::movimentos no app - scooter/
   // triciclo/patinete/peca/ferramenta/insumo/outro, sem catalogo aberto).
   var ROTULO_CATEGORIA_IDIOMA = {
-    pt: { scooter: "scooter", triciclo: "triciclo", patinete: "patinete", peca: "peca", ferramenta: "ferramenta", insumo: "insumo", outro: "outro" },
+    pt: { scooter: "scooter", triciclo: "triciclo", patinete: "patinete", peca: "peça", ferramenta: "ferramenta", insumo: "insumo", outro: "outro" },
     zh: { scooter: "电动踏板车", triciclo: "三轮车", patinete: "滑板车", peca: "零件", ferramenta: "工具", insumo: "耗材", outro: "其他" }
   };
 
@@ -2859,6 +2889,7 @@
     ultimosPendentesCache = pendentes;
     var el = document.getElementById("lista-pendentes");
     document.getElementById("cartao-pendentes").classList.toggle("vazio", pendentesNoFiltro(pendentes).length === 0);
+    document.getElementById("contagem-pendentes").textContent = "(" + pendentesNoFiltro(pendentes).length + ")";
     if (pendentes.length === 0) {
       el.innerHTML = "<p>" + t("nenhuma") + "</p>";
       return;
@@ -2880,6 +2911,7 @@
     ultimosReparosAbertosCache = abertos;
     var el = document.getElementById("lista-reparos-abertos");
     document.getElementById("cartao-reparos-abertos").classList.toggle("vazio", abertos.length === 0);
+    document.getElementById("contagem-reparos").textContent = "(" + abertos.length + ")";
     if (abertos.length === 0) {
       el.innerHTML = "<p>" + t("nenhuma") + "</p>";
       return;
@@ -2902,6 +2934,7 @@
     var lista = abertas.filter(function (a) { return !armazem || a.armazem_codigo === armazem; });
     var el = document.getElementById("lista-assistencias-abertas");
     document.getElementById("cartao-assistencias-abertas").classList.toggle("vazio", lista.length === 0);
+    document.getElementById("contagem-assistencias").textContent = "(" + lista.length + ")";
     if (lista.length === 0) {
       el.innerHTML = "<p>" + t("nenhuma") + "</p>";
       return;
@@ -5037,7 +5070,10 @@
         selecionarSubaba(chip.getAttribute("data-ir-subaba"));
         document.getElementById("cartao-insights").scrollIntoView({ behavior: "smooth" });
       } else if (chip.getAttribute("data-ir")) {
-        document.getElementById(chip.getAttribute("data-ir")).scrollIntoView({ behavior: "smooth" });
+        var alvo = document.getElementById(chip.getAttribute("data-ir"));
+        var recolhido = alvo.querySelector("details");
+        if (recolhido) recolhido.open = true; // pendencias ficam recolhidas: o "Ver" abre a lista
+        alvo.scrollIntoView({ behavior: "smooth" });
       }
     });
 
