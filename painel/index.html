@@ -394,6 +394,34 @@
      Externo - cada card so aparece onde faz sentido. */
   #conteudo[data-aba-atual="reparo_externo"] #cartao-pendentes { display: none; }
   /* Sem nada pendente o quadro some - a faixa de atencao ja diz "Nada pendente". */
+  /* Faixa de controle: 4 numeros grandes no topo. Cor so na borda e no
+     numero, com o mesmo significado do resto do painel (azul saiu, verde
+     entrou, interno transferencia, aviso = o que cobrar). */
+  .faixa-controle { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 4px 0 16px; }
+  .tile { background: var(--cartao); border: 1px solid var(--borda); border-top: 3px solid var(--tile-cor); border-radius: var(--raio); padding: 14px 16px 12px; }
+  .tile-saida { --tile-cor: var(--azul); }
+  .tile-entrada { --tile-cor: var(--verde); }
+  .tile-interno { --tile-cor: var(--interno); }
+  .tile-pendencias { --tile-cor: var(--borda); }
+  .tile-pendencias.tile-tem-pendencia { --tile-cor: var(--aviso); background: var(--aviso-claro); }
+  .tile-rotulo { font-size: .8rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--texto-suave); }
+  .tile-valor { font-size: 2.6rem; font-weight: 700; line-height: 1.1; margin: 6px 0 2px; color: var(--tile-cor); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .tile-pendencias .tile-valor { color: var(--texto-suave); }
+  .tile-pendencias.tile-tem-pendencia .tile-valor { color: var(--aviso); }
+  .tile-sub { font-size: .85rem; color: var(--texto-suave); min-height: 1.3em; }
+  .tile-sub a { color: var(--aviso); font-weight: 600; }
+  .tile .kpi-armazens { margin-top: 8px; }
+  .linha-graficos { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .linha-graficos > .cartao { margin: 0; min-width: 0; }
+  #grafico-dias { overflow-x: auto; }
+  .linha-graficos .cartao-cabecalho h3 { margin: 0; }
+  @media (max-width: 600px) {
+    .faixa-controle { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tile { padding: 10px 12px; }
+    .tile-valor { font-size: 2rem; }
+    .linha-graficos { grid-template-columns: 1fr; }
+  }
+
   /* Pendencias e detalhes recolhidos (<details>): o titulo e o proprio botao. */
   .cartao-pendencia { padding-top: 14px; padding-bottom: 14px; }
   .cartao-pendencia summary, .mais-detalhes > summary { cursor: pointer; list-style: none; }
@@ -1015,6 +1043,37 @@
       <div id="status-armazens" class="status-armazens"></div>
     </div>
 
+    <!-- Painel de controle: os 4 numeros que respondem "como estamos" (saiu,
+         entrou, transferiu, o que cobrar), e logo abaixo o dia a dia e o mes a
+         mes. Os mesmos calculos de antes (calcularInsights / renderizarAtencao);
+         o detalhe por tipo/armazem/categoria fica no "Detalhar o periodo". -->
+    <section id="faixa-controle" class="faixa-controle" aria-live="polite"></section>
+
+    <div class="linha-graficos">
+      <section class="cartao escondido" id="bloco-por-dia">
+        <div class="cartao-cabecalho">
+          <h3 data-i18n="graficoDiasTitulo">Por dia</h3>
+          <div class="legenda">
+            <span class="legenda-item"><span class="legenda-cor barra-saida"></span><span data-i18n="legendaSaida">Saiu para fora</span></span>
+            <span class="legenda-item"><span class="legenda-cor barra-entrada"></span><span data-i18n="legendaEntrada">Entrou de fora</span></span>
+            <span class="legenda-item escondido" id="legenda-sem-fech"><span class="legenda-cor marca-sem-fech"></span><span data-i18n="legendaSemFechamento">Dia sem fechamento</span></span>
+          </div>
+        </div>
+        <div id="grafico-dias"></div>
+      </section>
+      <!-- Mes a mes: agregado no SQL, em cache por 30 min (nao roda a cada
+           atualizacao de 5 min). Nao depende do periodo escolhido acima. -->
+      <section class="cartao" id="bloco-evolucao">
+        <div class="cartao-cabecalho">
+          <span class="cabecalho-acoes"><h3 data-i18n="evolucaoTitulo">Mes a mes</h3>
+            <span class="info" tabindex="0" data-i18n-title="evolucaoNota">?</span></span>
+          <button type="button" id="botao-evolucao" class="secundario" data-i18n="evolucaoBotao">Ver por categoria</button>
+        </div>
+        <div id="mes-a-mes"></div>
+        <div id="tabela-evolucao"></div>
+      </section>
+    </div>
+
     <!-- So o que pede acao, com prazo: o que ainda esta dentro do prazo vira
          uma linha discreta embaixo, sem disputar atencao. -->
     <section class="cartao" id="cartao-atencao">
@@ -1072,23 +1131,12 @@
         <button type="button" class="subaba" data-subaba="operacao" role="tab" data-i18n="subabaOperacao">Operacao</button>
       </nav>
       <div data-painel-subaba="geral">
-      <div id="grade-kpis" class="grade-kpis"></div>
       <div id="faixa-secundaria" class="faixa-secundaria"></div>
-      <!-- Mes a mes: agregado no SQL, em cache por 30 min (nao roda a cada
-           atualizacao de 5 min). Nao depende do periodo escolhido acima. -->
-      <div class="grafico-bloco" id="bloco-evolucao">
-        <div class="cartao-cabecalho">
-          <span class="cabecalho-acoes"><h4 data-i18n="evolucaoTitulo" style="margin:0">Mes a mes</h4>
-            <span class="info" tabindex="0" data-i18n-title="evolucaoNota">?</span></span>
-          <button type="button" id="botao-evolucao" class="secundario" data-i18n="evolucaoBotao">Ver por categoria</button>
-        </div>
-        <div id="mes-a-mes"></div>
-        <div id="tabela-evolucao"></div>
-      </div>
       <!-- O mesmo periodo visto por tipo, por armazem e por categoria: util para
            conferir, mas repete os numeros de cima - fica recolhido. -->
       <details class="mais-detalhes" id="detalhes-periodo">
       <summary data-i18n="detalharPeriodo">Detalhar o periodo: por tipo, por armazem e por categoria</summary>
+      <div id="grade-kpis" class="grade-kpis"></div>
       <div class="grafico-bloco escondido" id="bloco-destaques">
         <h4 data-i18n="destaquesTitulo">Destaques do periodo</h4>
         <ul id="destaques" class="destaques"></ul>
@@ -1100,15 +1148,6 @@
         <div id="tabela-balanco"></div>
       </div>
       <div class="graficos-lado">
-        <div class="grafico-bloco escondido" id="bloco-por-dia">
-          <h4 data-i18n="graficoDiasTitulo">Por dia</h4>
-          <div class="legenda">
-            <span class="legenda-item"><span class="legenda-cor barra-saida"></span><span data-i18n="legendaSaida">Saiu para fora</span></span>
-            <span class="legenda-item"><span class="legenda-cor barra-entrada"></span><span data-i18n="legendaEntrada">Entrou de fora</span></span>
-            <span class="legenda-item escondido" id="legenda-sem-fech"><span class="legenda-cor marca-sem-fech"></span><span data-i18n="legendaSemFechamento">Dia sem fechamento</span></span>
-          </div>
-          <div id="grafico-dias"></div>
-        </div>
         <div class="grafico-bloco" id="bloco-categorias">
           <h4 data-i18n="graficoCategoriasTitulo">O que saiu para fora, por categoria</h4>
           <div id="grafico-categorias"></div>
@@ -1409,6 +1448,10 @@
       situacaoRecusadoBadge: "Recusado",
       divergenciaBadge: "divergência",
       detalharPeriodo: "Detalhar o período: por tipo, por armazém e por categoria",
+      faixaSaiuTodos: "Saiu da empresa",
+      faixaPendencias: "Para cobrar",
+      faixaPendenciasSub: "precisam de ação · ver abaixo",
+      faixaPendenciasOk: "nada atrasado agora",
       cartaoInsightsTitulo: "Resumo do período",
       cartaoInsightsSubtitulo: "Em unidades, já descontando estornos. Transferência entre armazéns e movimento interno: aparece só no bloco dela, nunca como entrada ou saída da empresa.",
       faixaSyncRotulo: "Última sincronização",
@@ -1713,6 +1756,10 @@
       situacaoRecusadoBadge: "拒收",
       divergenciaBadge: "差异",
       detalharPeriodo: "本期明细：按类型、仓库和类别",
+      faixaSaiuTodos: "对外出库",
+      faixaPendencias: "待跟进",
+      faixaPendenciasSub: "需要处理 · 见下方",
+      faixaPendenciasOk: "目前没有逾期事项",
       cartaoInsightsTitulo: "期间汇总",
       cartaoInsightsSubtitulo: "单位：件，已扣除冲销。仓库之间的调拨属于内部移动，只显示在调拨栏，不计为公司的入库或出库。",
       faixaSyncRotulo: "最近同步",
@@ -4025,6 +4072,7 @@
 
     var todas = alertas.concat(avisos);
     el.innerHTML = todas.join("") || '<li class="atencao-ok">' + t("atencaoNadaPendente") + "</li>";
+    atualizarTilePendencias(todas.length);
     document.getElementById("atencao-no-prazo").textContent = noPrazo.length ? t("atencaoNoPrazo") + " " + noPrazo.join(" · ") + "." : "";
   }
 
@@ -4565,6 +4613,56 @@
     return cartoes.join("");
   }
 
+  // Faixa de controle (topo): os mesmos numeros de construirKpis, grandes e
+  // sem o detalhe (que fica no "Detalhar o periodo"). O quarto numero, o que
+  // cobrar, vem de renderizarAtencao (atualizarTilePendencias).
+  function tileControle(opcoes) {
+    return '<div class="tile tile-' + opcoes.tom + '"' + (opcoes.id ? ' id="' + opcoes.id + '"' : "") + '>' +
+      '<div class="tile-rotulo">' + opcoes.rotulo + "</div>" +
+      '<div class="tile-valor">' + opcoes.valor + "</div>" +
+      '<div class="tile-sub">' + (opcoes.sub || "&nbsp;") + "</div>" +
+      (opcoes.armazens || "") + "</div>";
+  }
+
+  function construirFaixaControle(d, comparacao, pendentes) {
+    var semTransferencia = abaAtual === "reparo_externo" || abaAtual === "assistencia";
+    var tiles = [
+      tileControle({
+        tom: "saida", rotulo: t(abaAtual ? ROTULO_SAIDA_POR_ABA[abaAtual] : "faixaSaiuTodos"), valor: formatarNumero(d.total.saida_externa),
+        sub: deltaDe(comparacao, "saida_externa", d.total.saida_externa) || unidadesTexto(d.total.saida_externa),
+        armazens: porArmazemHtml(d, "saida_externa")
+      }),
+      tileControle({
+        tom: "entrada", rotulo: t(abaAtual === "reparo_externo" ? "kpiEntradaReparo" : "kpiEntrada"),
+        valor: formatarNumero(d.total.entrada_externa),
+        sub: deltaDe(comparacao, "entrada_externa", d.total.entrada_externa) || unidadesTexto(d.total.entrada_externa),
+        armazens: porArmazemHtml(d, "entrada_externa")
+      })
+    ];
+    if (!semTransferencia) {
+      var emTransito = pendentesNoFiltro(pendentes).length;
+      tiles.push(tileControle({
+        tom: "interno", rotulo: t("kpiTransferencias"), valor: formatarNumero(d.total.transf_enviada),
+        sub: emTransito
+          ? '<span class="texto-aviso">' + t("kpiTransferenciasTransito") + " <strong>" + emTransito + "</strong></span>"
+          : t("kpiTransferenciasRecebidas") + " <strong>" + d.total.transf_recebida + "</strong>",
+        armazens: porArmazemHtml(d, "transf_enviada")
+      }));
+    }
+    tiles.push(tileControle({ tom: "pendencias", id: "tile-pendencias", rotulo: t("faixaPendencias"), valor: "–", sub: "" }));
+    return tiles.join("");
+  }
+
+  function atualizarTilePendencias(quantas) {
+    var tile = document.getElementById("tile-pendencias");
+    if (!tile) return;
+    tile.classList.toggle("tile-tem-pendencia", quantas > 0);
+    tile.querySelector(".tile-valor").textContent = quantas;
+    tile.querySelector(".tile-sub").innerHTML = quantas
+      ? '<a href="#cartao-atencao">' + t("faixaPendenciasSub") + "</a>"
+      : t("faixaPendenciasOk");
+  }
+
   // Linha discreta abaixo dos numeros principais: quantidade de lancamentos,
   // correcoes e (no SAC) valores. Antes eram tiles do mesmo tamanho dos
   // numeros de movimento, disputando atencao com eles.
@@ -4758,6 +4856,7 @@
   function renderizarInsights(filtrados, pendentes, comparacaoInsights, acharOriginal) {
     var d = calcularInsights(filtrados, acharOriginal);
     document.getElementById("periodo-resumo").textContent = textoPeriodoResumo();
+    document.getElementById("faixa-controle").innerHTML = construirFaixaControle(d, comparacaoInsights, pendentes);
     document.getElementById("grade-kpis").innerHTML = construirKpis(d, comparacaoInsights, pendentes);
     var cardsFluxo = abaAtual === "" ? construirCardsFluxo(d) : "";
     document.getElementById("grade-fluxos").innerHTML = cardsFluxo;
