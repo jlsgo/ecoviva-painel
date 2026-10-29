@@ -1569,6 +1569,9 @@
       atencaoNoPrazo: "Em aberto, ainda no prazo:",
       noPrazoChamados: "{n} chamado(s)",
       noPrazoTransf: "{n} transferência(s) de hoje",
+      atencaoPedidosVelhos: "{n} pedido(s) entre armazéns sem resposta desde ontem ou antes",
+      atencaoPedidosDetalhe: "Mais antigo: {origem} pediu ao {destino} em {data}.",
+      noPrazoPedidos: "{n} pedido(s) entre armazéns de hoje",
       noPrazoReparos: "{n} peça(s) no técnico externo",
       atencaoNadaPendente: "Nada precisa de atenção agora.",
       evolucaoCarregando: "Calculando...",
@@ -1877,6 +1880,9 @@
       atencaoNoPrazo: "未结但仍在期限内：",
       noPrazoChamados: "{n} 个工单",
       noPrazoTransf: "今天的 {n} 笔调拨",
+      atencaoPedidosVelhos: "{n} 个仓库间请求自昨天或更早仍未回复",
+      atencaoPedidosDetalhe: "最早：{origem} 向 {destino} 请求，于 {data}。",
+      noPrazoPedidos: "今天的 {n} 个仓库间请求",
       noPrazoReparos: "{n} 件在外部技师处",
       atencaoNadaPendente: "目前没有需要关注的事项。",
       evolucaoCarregando: "计算中...",
@@ -2012,6 +2018,7 @@
   var ultimaSincPorArmazemCache = {};
   var ultimosPendentesCache = [];
   var ultimosReparosAbertosCache = [];
+  var ultimosPedidosAbertosCache = [];
   var ultimasAssistenciasAbertasCache = [];
 
   function aplicarTraducoesEstaticas() {
@@ -2595,6 +2602,31 @@
   // nem estornada) sem devolucao (saida sem etapa) POSTERIOR do mesmo chamado
   // no mesmo armazem, tambem valida. "Com o tecnico externo" = mais envios que
   // retornos desde a abertura. Sempre global, como os reparos - e um backlog.
+  // Pedidos entre armazens (#118) sem resposta e sem cancelamento, nos ultimos
+  // 30 dias (mesma janela do app). A tabela so existe depois que um PC com a
+  // versao nova sincronizou - antes disso a consulta falha e volta vazio. Usa o
+  // indice (armazem_destino_codigo, data) com o IN dos codigos.
+  async function buscarPedidosEmAberto() {
+    var desde = new Date();
+    desde.setDate(desde.getDate() - 30);
+    var marcadores = CODIGOS_ARMAZENS.map(function () { return "?"; }).join(", ");
+    var sql = "SELECT s.armazem_codigo, s.id_origem, s.armazem_destino_codigo, s.fluxo, s.data, s.hora " +
+      "FROM solicitacoes_consolidadas s " +
+      "WHERE s.armazem_destino_codigo IN (" + marcadores + ") AND s.data >= ? AND s.cancelada_em IS NULL " +
+      "AND NOT EXISTS (SELECT 1 FROM solicitacoes_respostas_consolidadas r " +
+      "WHERE r.solicitacao_armazem_codigo = s.armazem_codigo AND r.solicitacao_id_origem = s.id_origem) " +
+      "ORDER BY s.data ASC, s.hora ASC";
+    try {
+      var linhas = await executarSql(sql, CODIGOS_ARMAZENS.concat([dataIso(desde)]));
+      return linhas.map(function (l) {
+        function v(i) { return l[i] && l[i].value !== undefined ? l[i].value : null; }
+        return { armazem_codigo: v(0), id_origem: Number(v(1)), armazem_destino_codigo: v(2), fluxo: v(3), data: v(4), hora: v(5) };
+      });
+    } catch (e) {
+      return [];
+    }
+  }
+
   async function buscarAssistenciasEmAberto() {
     var sql = "SELECT " + COLUNAS_MOVIMENTO + " FROM movimentos_consolidados " +
       "WHERE fluxo = 'assistencia'";
@@ -4049,6 +4081,20 @@
     }
     if (transf.length > transfVelhas.length) noPrazo.push(preencher(t("noPrazoTransf"), { n: transf.length - transfVelhas.length }));
 
+    // Pedido entre armazens (#118): conta pra quem pediu e pra quem tem que enviar.
+    var pedidos = (ultimosPedidosAbertosCache || []).filter(function (p) {
+      return (!armazem || p.armazem_codigo === armazem || p.armazem_destino_codigo === armazem) &&
+        (abaAtual === "" || abaAtual === p.fluxo);
+    });
+    var pedidosVelhos = pedidos.filter(function (p) { return diasEntre(p.data, hoje) >= DIAS_ALERTA_TRANSFERENCIA; });
+    if (pedidosVelhos.length) {
+      var p0 = pedidosVelhos[0];
+      avisos.push(linhaAtencao("aviso", preencher(t("atencaoPedidosVelhos"), { n: pedidosVelhos.length }),
+        preencher(t("atencaoPedidosDetalhe"), { origem: escaparHtml(p0.armazem_codigo), destino: escaparHtml(p0.armazem_destino_codigo), data: formatarData(p0.data) }),
+        ""));
+    }
+    if (pedidos.length > pedidosVelhos.length) noPrazo.push(preencher(t("noPrazoPedidos"), { n: pedidos.length - pedidosVelhos.length }));
+
     if (abaAtual === "" || abaAtual === "reparo_externo") {
       var reparos = (ultimosReparosAbertosCache || []).filter(doArmazem);
       var reparosVelhos = reparos.filter(function (x) { return diasEntre(x.data, hoje) > DIAS_ALERTA_REPARO; });
@@ -4994,7 +5040,8 @@
         buscarReparosEmAberto(),
         compararPeriodo && !cacheValido ? buscarMovimentosFiltrados(filtrosComparacao) : Promise.resolve(null),
         buscarFechamentosDoPeriodo(filtros),
-        buscarAssistenciasEmAberto()
+        buscarAssistenciasEmAberto(),
+        buscarPedidosEmAberto()
       ]);
       if (minhaVez !== seqAtualizar) return;
       var dadosFiltrados = resultados[0];
@@ -5016,6 +5063,7 @@
       renderizarContagemAbas(contagemPorFluxo);
       renderizarReparosAbertos(reparosAbertos);
       renderizarAssistenciasAbertas(resultados[7]);
+      ultimosPedidosAbertosCache = resultados[8] || [];
       renderizarChegadas(dadosFiltrados.movimentos);
 
       var precisamOriginal = [];
